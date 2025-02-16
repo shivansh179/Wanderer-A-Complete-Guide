@@ -82,11 +82,11 @@ const Index = () => {
     }
   };
 
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-      setError("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+  //     setError("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
+  //   }
+  // }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-400 to-purple-500">
