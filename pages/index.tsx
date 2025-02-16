@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import Navbar from '@/pages/Component/Navbar';
 import axios from 'axios';
 import { ThreeDots } from 'react-loader-spinner';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 interface Image {
   largeImageURL: string;
@@ -25,8 +28,9 @@ const Index = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const GEMINI_API_KEY = "AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU";
+  const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
+   
   // Function to fetch the travel plan
   const planFetcher = async () => {
     setLoading(true);
@@ -144,19 +148,40 @@ const Index = () => {
         {/* Plan Display */}
         {plan && (
           <div className="mt-8 bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-            {plan}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              className="prose max-w-none"
+              components={{
+                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-600 mb-4" {...props} />,
+                h2: ({ node, ...props }) => <h2 className="text-xl font-semibold text-blue-500 mt-4 mb-2" {...props} />,
+                p: ({ node, ...props }) => <p className="text-gray-700 mb-3 leading-relaxed" {...props} />,
+                ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
+                ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
+                li: ({ node, ...props }) => <li className="text-gray-600" {...props} />,
+                strong: ({ node, ...props }) => <strong className="font-semibold text-blue-800" {...props} />,
+                a: ({ node, ...props }) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
+              }}
+            >
+              {plan}
+            </ReactMarkdown>
           </div>
         )}
+
 
         {/* Image Section */}
         {images.length > 0 && (
           <>
             <h1 className="font-bold text-violet-200 text-3xl mt-10">Some Glimpse about your destination</h1>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 p-4 sm:p-8">
               {images.map((image, index) => (
                 <div key={index} className="overflow-hidden rounded-lg shadow-lg">
-                  <img src={image.largeImageURL} alt={image.tags} className="w-full h-full object-cover" />
-                </div>
+                    <img
+                    src={image.largeImageURL}
+                     alt={image.tags}
+                    className="w-full cursor-pointer h-full object-cover rounded-lg hover:scale-110 transition-transform duration-300"
+                    />      
+                                </div>
               ))}
             </div>
           </>
