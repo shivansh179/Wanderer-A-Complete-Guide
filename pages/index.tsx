@@ -4,11 +4,23 @@ import axios from 'axios';
 import { ThreeDots } from 'react-loader-spinner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { IoIosArrowDown, IoIosArrowDropup, IoIosArrowUp } from "react-icons/io";
+import { IoIosArrowDropdown } from "react-icons/io";
 import rehypeRaw from 'rehype-raw';
+import xml2js from 'xml2js';
+import Link from 'next/link';
+
 
 interface Image {
   largeImageURL: string;
   tags: string;
+}
+
+interface NewsItem {
+  title: string;
+  url: string;
+  description: string;
+  publishedAt: string;
 }
 
 const Index = () => {
@@ -22,6 +34,9 @@ const Index = () => {
   const [elderlyCount, setElderlyCount] = useState('');
   const [childrenCount, setChildrenCount] = useState('');
   const [images, setImages] = useState<Image[]>([]);
+  const [imagePower, setImagePower] = useState(false);
+  const [loadingNews, setLoadingNews] = useState(false);
+  const [news, setNews] = useState<NewsItem[]>([]);
 
   // State for API response and loading
   const [plan, setPlan] = useState('');
@@ -41,28 +56,28 @@ const Index = () => {
         throw new Error("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
       }
 
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          contents: [
-            {
-              parts: [
-                {
-                  text: `I am planning a ${days}-day trip from ${startLocation} to ${destination} and we are total ${peopleCount}, where the ladies are ${ladiesCount}, elders are ${elderlyCount}, and children are ${childrenCount}. My budget is ${budget}. Please provide a detailed itinerary, including travel routes, must-visit places, activities, and an estimated budget breakdown. Ensure it fits within my budget and provide links to relevant images.`
-                }
-              ]
-            }
-          ]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      // const response = await axios.post(
+      //   `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      //   {
+      //     contents: [
+      //       {
+      //         parts: [
+      //           {
+      //             text: `I am planning a ${days}-day trip from ${startLocation} to ${destination} and we are total ${peopleCount}, where the ladies are ${ladiesCount}, elders are ${elderlyCount}, and children are ${childrenCount}. My budget is ${budget}. Please provide a detailed itinerary, including travel routes, must-visit places, activities, and an estimated budget breakdown. Ensure it fits within my budget and provide links to relevant images.`
+      //           }
+      //         ]
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     }
+      //   }
+      // );
 
-      const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
-      setPlan(extractedPlan);
+      // const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
+      // setPlan(extractedPlan);
 
       // Fetch images for the destination
       await imageFetcher(destination);
@@ -75,78 +90,120 @@ const Index = () => {
     }
   };
 
+  
+
   const imageFetcher = async (query: string) => {
     try {
       const imageResponse = await axios.get(
         `https://pixabay.com/api/?key=33588047-ab7f2d7ec2a21089a0a35ce9f&q=${query}&image_type=photo`
       );
       setImages(imageResponse.data.hits || []);
+      await fetchNews();
     } catch (err: any) {
       console.error('Error fetching images:', err);
       setImages([]); // Clear images to indicate an error state
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-400 to-purple-500">
-      <Navbar />
-      <div className="flex flex-col items-center justify-center mt-10 p-4">
-        <h1 className="text-white text-4xl font-bold mb-6">Plan Your Perfect Trip</h1>
+  const fetchNews = async () => {
+    try {
+      const response = await axios.get('https://www.amarujala.com/rss.xml'); // Call the API route
+      const parser = new xml2js.Parser({ explicitArray: false });
+      const result = await parser.parseStringPromise(response.data);
 
-        {/* Input Form */}
-        <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-lg">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Trip Details</h2>
-          <div className="space-y-4">
-            {[{ label: "Start Location", state: startLocation, setState: setStartLocation },
+
+      
+      setNews(result.data.row);
+      console.log("the news is ", result.data.row);
+
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch RSS feed.');
+    }
+    setLoading(false);
+  };
+
+
+  const isActive = () =>{
+    if(imagePower){
+      setImagePower(false);
+    }else{
+      setImagePower(true);
+    }
+  }
+
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      <div className="grid lg:grid-cols-2 gap-8 p-8 max-w-7xl mx-auto">
+        {/* Left Column - Input Form */}
+        <div className="bg-white rounded-xl shadow-xl p-6 h-fit">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Travel Planner</h1>
+            <p className="text-gray-500">Craft your perfect itinerary with AI-powered suggestions</p>
+          </div>
+
+          <div className="space-y-5">
+            {[
+              { label: "Starting Point", state: startLocation, setState: setStartLocation },
               { label: "Destination", state: destination, setState: setDestination },
-              { label: "Number of Days", state: days, setState: setDays },
-              { label: "Budget", state: budget, setState: setBudget },
-              { label: "Number of People", state: peopleCount, setState: setPeopleCount },
-              { label: "Number of Ladies", state: ladiesCount, setState: setLadiesCount },
-              { label: "Number of Elderly", state: elderlyCount, setState: setElderlyCount },
-              { label: "Number of Children", state: childrenCount, setState: setChildrenCount }
-            ].map(({ label, state, setState }, index) => (
+              { label: "Trip Duration (Days)", state: days, setState: setDays, type: "number" },
+              { label: "Total Budget", state: budget, setState: setBudget, type: "number" },
+              { label: "Total Travelers", state: peopleCount, setState: setPeopleCount, type: "number" },
+              { label: "Female Travelers", state: ladiesCount, setState: setLadiesCount, type: "number" },
+              { label: "Senior Travelers", state: elderlyCount, setState: setElderlyCount, type: "number" },
+              { label: "Children", state: childrenCount, setState: setChildrenCount, type: "number" }
+            ].map(({ label, state, setState, type = "text" }, index) => (
               <div key={index}>
-                <label className="block text-gray-700 font-semibold mb-1">{label}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
                 <input
-                  type="text"
-                  placeholder={`Enter ${label.toLowerCase()}`}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type={type}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
+                  placeholder={label}
                 />
               </div>
             ))}
 
-            {/* Submit Button */}
             <button
-              className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow hover:bg-blue-700 transition duration-300"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center"
               onClick={planFetcher}
               disabled={loading}
             >
-              {loading ? 'Generating...' : 'Generate Plan'}
+              {loading ? (
+                <ThreeDots height="24" width="24" color="#ffffff" />
+              ) : (
+                'Generate Travel Plan'
+              )}
             </button>
           </div>
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="mt-8 flex flex-col items-center">
-            <ThreeDots height="80" width="80" radius="9" color="#ffffff" ariaLabel="three-dots-loading" visible={true} />
-            <p className="text-white mt-4">Generating your trip plan...</p>
-          </div>
-        )}
+        {/* Right Column - Results */}
+        <div className="space-y-8">
+          {/* Loading State */}
+          {loading && (
+            <div className="bg-white rounded-xl shadow-xl p-8 text-center">
+              <div className="flex flex-col items-center justify-center h-64">
+                <ThreeDots height="40" width="40" color="#3b82f6" />
+                <p className="mt-4 text-gray-600">Analyzing destinations and crafting your perfect itinerary...</p>
+              </div>
+            </div>
+          )}
 
-        {/* Error State */}
-        {error && (
-          <div className="mt-8 bg-red-200 border border-red-500 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline">{error}</span>
-          </div>
-        )}
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+              <h3 className="text-red-600 font-semibold mb-2">Error Generating Plan</h3>
+              <p className="text-red-500 text-sm">{error}</p>
+            </div>
+          )}
 
-        {/* Plan Display */}
-        {plan && (
+          {/* Travel Plan */}
+          {plan && (
           <div className="mt-8 bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -169,23 +226,53 @@ const Index = () => {
         )}
 
 
-        {/* Image Section */}
-        {images.length > 0 && (
-          <>
-            <h1 className="font-bold text-violet-200 text-3xl mt-10">Some Glimpse about your destination</h1>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 p-4 sm:p-8">
-              {images.map((image, index) => (
-                <div key={index} className="overflow-hidden rounded-lg shadow-lg">
-                    <img
-                    src={image.largeImageURL}
-                     alt={image.tags}
-                    className="w-full cursor-pointer h-full object-cover rounded-lg hover:scale-110 transition-transform duration-300"
-                    />      
-                                </div>
-              ))}
+          {/* Image Gallery */}
+          {images.length > 0 && (
+            <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+              <button 
+                onClick={isActive}
+                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
+              >
+                <span className="font-semibold text-gray-700">
+                  Destination Photos ({images.length})
+                </span>
+                {imagePower ? (
+                  <IoIosArrowUp className="text-gray-500" />
+                ) : (
+                  <IoIosArrowDown className="text-gray-500" />
+                )}
+              </button>
+
+              {imagePower && (
+                <div className="p-6 pt-0">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="aspect-square overflow-hidden rounded-lg bg-gray-100">
+                        <img
+                          src={image.largeImageURL}
+                          alt={image.tags}
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          loading="lazy"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              
             </div>
-          </>
-        )}
+          )}
+            <div>
+                  {news.map((data) => (
+                    <div className='border-2 p-4 bg-indigo-400'>
+                      <Link href={data.URL}>
+                        <ol className='font-semibold '>{data.News}</ol>
+                     </Link>
+                    </div>
+                  ))}
+                </div>
+        </div>
       </div>
     </div>
   );
