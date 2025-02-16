@@ -36,7 +36,7 @@ const Index = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const GEMINI_API_KEY = "AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4";
 
   // Function to fetch the travel plan
   const planFetcher = async () => {
