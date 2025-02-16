@@ -9,9 +9,17 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 // import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism/dracula';
 import { dracula } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
-const Index = () => {
-  const syntaxHighlighterRef = useRef<SyntaxHighlighter>(null);
 
+interface images {
+  largeImageURL: string;
+  tags: string;
+   
+}
+
+
+
+const Index = () => {
+ 
   // State for form inputs
   const [startLocation, setStartLocation] = useState('');
   const [destination, setDestination] = useState('');
@@ -257,8 +265,7 @@ const Index = () => {
                       style={dracula}
                       language={match[1]}
                       PreTag="div"
-                      ref={syntaxHighlighterRef}
-                      {...props}
+                       {...props}
                     >
                       {String(children).replace(/\n$/, '')}
                     </SyntaxHighlighter>
@@ -276,20 +283,18 @@ const Index = () => {
           </div>
         )}
       
+      {images.length >0 ? (
       <h1 className='font-bold text-violet-200  text-3xl mt-10'>Some Glimpse about your destination</h1>
+      ):(
+        " "
+      )}
 
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
-        {images.map((image) => (
-          <div className="border p-2 rounded-lg shadow-md">
-             <img
-              src={image.largeImageURL}
-              alt={image.tags}
-              className="w-full h-auto rounded-lg"
-            />
-          
-           
-        </div>
-      ))}
+    {images.map((image: images, index) => (
+            <div key={index} className="overflow-hidden rounded-lg shadow-lg">
+              <img src={image.largeImageURL} alt={image.tags} className="w-full h-full object-cover" />
+            </div>
+          ))}
     </div>
 
 
