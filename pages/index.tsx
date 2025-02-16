@@ -255,31 +255,10 @@ const Index = () => {
         {/* Plan Display */}
         {plan && !loading && !error && (
           <div className="mt-8 bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                code({ node, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  return match ? (
-                    <SyntaxHighlighter
-                       language={match[1]}
-                      PreTag="div"
-                       {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                }
-              }}
-              
-            >
+             
+               
               {plan}
-            </ReactMarkdown>
-          </div>
+           </div>
         )}
       
       {images.length >0 ? (
