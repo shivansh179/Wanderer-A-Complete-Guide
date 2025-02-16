@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { ReactNode, useState } from 'react';
 import Navbar from '@/pages/Component/Navbar';
 import axios from 'axios';
 import { ThreeDots } from 'react-loader-spinner';
@@ -9,6 +9,7 @@ import { IoIosArrowDropdown } from "react-icons/io";
 import rehypeRaw from 'rehype-raw';
 import xml2js from 'xml2js';
 import Link from 'next/link';
+import { Url } from 'url';
 
 
 interface Image {
@@ -17,6 +18,8 @@ interface Image {
 }
 
 interface NewsItem {
+  URL: Url;
+  News: ReactNode;
   title: string;
   url: string;
   description: string;
@@ -56,28 +59,28 @@ const Index = () => {
         throw new Error("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
       }
 
-      // const response = await axios.post(
-      //   `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      //   {
-      //     contents: [
-      //       {
-      //         parts: [
-      //           {
-      //             text: `I am planning a ${days}-day trip from ${startLocation} to ${destination} and we are total ${peopleCount}, where the ladies are ${ladiesCount}, elders are ${elderlyCount}, and children are ${childrenCount}. My budget is ${budget}. Please provide a detailed itinerary, including travel routes, must-visit places, activities, and an estimated budget breakdown. Ensure it fits within my budget and provide links to relevant images.`
-      //           }
-      //         ]
-      //       }
-      //     ]
-      //   },
-      //   {
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //     }
-      //   }
-      // );
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          contents: [
+            {
+              parts: [
+                {
+                  text: `I am planning a ${days}-day trip from ${startLocation} to ${destination} and we are total ${peopleCount}, where the ladies are ${ladiesCount}, elders are ${elderlyCount}, and children are ${childrenCount}. My budget is ${budget}. Please provide a detailed itinerary, including travel routes, must-visit places, activities, and an estimated budget breakdown. Ensure it fits within my budget and provide links to relevant images.`
+                }
+              ]
+            }
+          ]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
 
-      // const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
-      // setPlan(extractedPlan);
+      const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
+      setPlan(extractedPlan);
 
       // Fetch images for the destination
       await imageFetcher(destination);
