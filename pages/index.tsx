@@ -1,16 +1,13 @@
-import React, { ReactNode, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/pages/Component/Navbar';
 import axios from 'axios';
 import { ThreeDots } from 'react-loader-spinner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { IoIosArrowDown, IoIosArrowDropup, IoIosArrowUp } from "react-icons/io";
-import { IoIosArrowDropdown } from "react-icons/io";
+import { IoIosArrowDown } from "react-icons/io";
 import rehypeRaw from 'rehype-raw';
-import xml2js from 'xml2js';
-import Link from 'next/link';
-import { Url } from 'url';
-
+import { motion } from 'framer-motion';
+import { useSpring, animated } from 'react-spring';
 
 interface Image {
   largeImageURL: string;
@@ -18,16 +15,13 @@ interface Image {
 }
 
 interface NewsItem {
-  URL: Url;
-  News: ReactNode;
+  [x: string]: any;
   title: string;
-  url: string;
+  link: string;
   description: string;
-  publishedAt: string;
 }
 
 const Index = () => {
-  // State for form inputs
   const [startLocation, setStartLocation] = useState('');
   const [destination, setDestination] = useState('');
   const [days, setDays] = useState('');
@@ -40,19 +34,28 @@ const Index = () => {
   const [imagePower, setImagePower] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [locationImage, setLocationImage] = useState('');
+  const [locationBio, setLocationBio] = useState('');
 
-  // State for API response and loading
   const [plan, setPlan] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-   
-  // Function to fetch the travel plan
+  const [activeSection, setActiveSection] = useState<'plan' | 'about' | 'photos' | 'news'>('plan');
+  const [planGenerated, setPlanGenerated] = useState(false);
+
+  // Animation for active section underline
+  const underlineAnimation = useSpring({
+    width: activeSection ? '100%' : '0%',
+    config: { tension: 300, friction: 20 },
+  });
+
   const planFetcher = async () => {
     setLoading(true);
     setError(null);
+    setPlanGenerated(true);
 
     try {
       if (!GEMINI_API_KEY) {
@@ -82,18 +85,16 @@ const Index = () => {
       const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
       setPlan(extractedPlan);
 
-      // Fetch images for the destination
       await imageFetcher(destination);
+      setActiveSection('plan');
     } catch (err: any) {
       console.error('Error fetching the plan:', err);
       setError(err.message || 'Failed to fetch the plan. Please try again.');
-      setPlan(''); // Clear the plan to indicate an error state
+      setPlan('');
     } finally {
       setLoading(false);
     }
   };
-
-  
 
   const imageFetcher = async (query: string) => {
     try {
@@ -101,54 +102,93 @@ const Index = () => {
         `https://pixabay.com/api/?key=33588047-ab7f2d7ec2a21089a0a35ce9f&q=${query}&image_type=photo`
       );
       setImages(imageResponse.data.hits || []);
-      await fetchNews();
+      fetchNewsForDestination(destination);
     } catch (err: any) {
       console.error('Error fetching images:', err);
-      setImages([]); // Clear images to indicate an error state
+      setImages([]);
     }
   };
 
-  const fetchNews = async () => {
+  const fetchNewsForDestination = async (destination: string) => {
+    setLoadingNews(true);
+    setError(null);
+
     try {
-      const response = await axios.get('https://www.amarujala.com/rss.xml'); // Call the API route
-      const parser = new xml2js.Parser({ explicitArray: false });
-      const result = await parser.parseStringPromise(response.data);
+      const response = await axios.post('/api/news', { location: destination });
+      if(response.status == 500){
+          alert("It is just a reminder !!! Try providing the complete name of destination for better experience");
+      }
+      if (response.status === 200) {
+        setNews(response.data);
+        console.log("the news are ", response.data);
+        // Extract image and bio from the end of the array
+        const lastItem = response.data[response.data.length - 2];
+        const secondLastItem = response.data[response.data.length - 1];
 
+        if (lastItem && lastItem.image) {
+          setLocationImage(lastItem.image.url);
+        }
 
-      
-      setNews(result.data.row);
-      console.log("the news is ", result.data.row);
+        
 
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch RSS feed.');
+        if (secondLastItem && secondLastItem.bio) {
+          setLocationBio(secondLastItem.bio);
+        }
+      } else {
+        setError('Failed to fetch news.');
+        console.error('Error fetching news:', response.status, response.data);
+        setNews([]);
+      }
+    } catch (error) {
+      setError('Failed to fetch news.');
+      console.error('Error fetching news:', error);
+      setNews([]);
+    } finally {
+      setLoadingNews(false);
     }
-    setLoading(false);
   };
 
-
-  const isActive = () =>{
-    if(imagePower){
-      setImagePower(false);
-    }else{
-      setImagePower(true);
+  useEffect(() => {
+    if (planGenerated && destination) {
+      fetchNewsForDestination(destination);
     }
-  }
+  }, [destination, planGenerated]);
 
+  const isActive = () => {
+    setImagePower(!imagePower);
+  };
+
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <motion.div
+      className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+    >
       <Navbar />
-      
       <div className="grid lg:grid-cols-2 gap-8 p-8 max-w-7xl mx-auto">
         {/* Left Column - Input Form */}
-        <div className="bg-white rounded-xl shadow-xl p-6 h-fit">
+        <motion.div
+          className="bg-white rounded-3xl shadow-2xl p-8 h-fit"
+          whileHover={{ scale: 1.03 }}
+          transition={{ duration: 0.2 }}
+        >
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Travel Planner</h1>
-            <p className="text-gray-500">Craft your perfect itinerary with AI-powered suggestions</p>
+            <h1 className="text-4xl font-extrabold text-blue-800 mb-2 tracking-tight">
+              Dream Weaver: Your AI Trip Planner
+            </h1>
+            <p className="text-gray-600 text-lg leading-relaxed">
+              Unlock unforgettable journeys with personalized AI-powered itineraries.
+            </p>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-6">
             {[
               { label: "Starting Point", state: startLocation, setState: setStartLocation },
               { label: "Destination", state: destination, setState: setDestination },
@@ -160,124 +200,213 @@ const Index = () => {
               { label: "Children", state: childrenCount, setState: setChildrenCount, type: "number" }
             ].map(({ label, state, setState, type = "text" }, index) => (
               <div key={index}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
                 <input
                   type={type}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-5 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all text-gray-700"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  placeholder={label}
+                  placeholder={`Enter your ${label.toLowerCase()}`}
                 />
               </div>
             ))}
 
-            <button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center"
+            <motion.button
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 rounded-xl transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
               onClick={planFetcher}
               disabled={loading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               {loading ? (
-                <ThreeDots height="24" width="24" color="#ffffff" />
+                <ThreeDots height="28" width="28" color="#ffffff" />
               ) : (
-                'Generate Travel Plan'
+                'Craft My Adventure'
               )}
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Right Column - Results */}
         <div className="space-y-8">
+          {/* Navigation Bar */}
+          <div className="bg-white rounded-3xl shadow-2xl p-6 flex space-x-5 items-center">
+            {['plan', 'about', 'photos', 'news'].map((section) => (
+              <div key={section} className="relative">
+                <motion.button
+                  className={`py-3 px-6 rounded-full text-lg font-semibold ${activeSection === section ? 'text-blue-600' : 'text-gray-600 hover:text-blue-500'} transition-colors duration-300 focus:outline-none`}
+                  onClick={() => setActiveSection(section as 'plan' | 'about' | 'photos' | 'news')}
+                  disabled={loading || (section === 'news' && !planGenerated)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {section.charAt(0).toUpperCase() + section.slice(1)}
+                </motion.button>
+                {activeSection === section && (
+                  <animated.div
+                    style={underlineAnimation}
+                    // className="absolute bottom-0 left-0 h-1 bg-blue-500 rounded-full"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+
           {/* Loading State */}
           {loading && (
-            <div className="bg-white rounded-xl shadow-xl p-8 text-center">
+            <motion.div
+              className="bg-white rounded-3xl shadow-2xl p-8 text-center"
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
               <div className="flex flex-col items-center justify-center h-64">
-                <ThreeDots height="40" width="40" color="#3b82f6" />
-                <p className="mt-4 text-gray-600">Analyzing destinations and crafting your perfect itinerary...</p>
+                <ThreeDots height="50" width="50" color="#6366F1" />
+                <p className="mt-5 text-gray-600 text-lg">
+                  Summoning the travel spirits...
+                </p>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Error State */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-              <h3 className="text-red-600 font-semibold mb-2">Error Generating Plan</h3>
-              <p className="text-red-500 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Travel Plan */}
-          {plan && (
-          <div className="mt-8 bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
-              className="prose max-w-none"
-              components={{
-                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-600 mb-4" {...props} />,
-                h2: ({ node, ...props }) => <h2 className="text-xl font-semibold text-blue-500 mt-4 mb-2" {...props} />,
-                p: ({ node, ...props }) => <p className="text-gray-700 mb-3 leading-relaxed" {...props} />,
-                ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
-                ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
-                li: ({ node, ...props }) => <li className="text-gray-600" {...props} />,
-                strong: ({ node, ...props }) => <strong className="font-semibold text-blue-800" {...props} />,
-                a: ({ node, ...props }) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
-              }}
+            <motion.div
+              className="bg-white rounded-3xl shadow-2xl p-8 text-center"
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
             >
-              {plan}
-            </ReactMarkdown>
-          </div>
-        )}
-
-
-          {/* Image Gallery */}
-          {images.length > 0 && (
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-              <button 
-                onClick={isActive}
-                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
-              >
-                <span className="font-semibold text-gray-700">
-                  Destination Photos ({images.length})
-                </span>
-                {imagePower ? (
-                  <IoIosArrowUp className="text-gray-500" />
-                ) : (
-                  <IoIosArrowDown className="text-gray-500" />
-                )}
-              </button>
-
-              {imagePower && (
-                <div className="p-6 pt-0">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {images.map((image, index) => (
-                      <div key={index} className="aspect-square overflow-hidden rounded-lg bg-gray-100">
-                        <img
-                          src={image.largeImageURL}
-                          alt={image.tags}
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                          loading="lazy"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              
-            </div>
+              <p className="text-red-500 font-medium text-lg">
+                Oops! Something went wrong: {error}
+              </p>
+            </motion.div>
           )}
-            <div>
-                  {news.map((data) => (
-                    <div className='border-2 p-4 bg-indigo-400'>
-                      <Link href={data.URL}>
-                        <ol className='font-semibold '>{data.News}</ol>
-                     </Link>
+
+          {/* Plan Section */}
+          {activeSection === 'plan' && plan && (
+            <motion.div
+              className="bg-white rounded-3xl shadow-2xl p-8 w-full h-120 max-w-4xl overflow-auto"
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
+              <h2 className="text-3xl font-semibold text-blue-700 mb-6">
+                Your Personalized Itinerary
+              </h2>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                className="prose max-w-none"
+                components={{
+                  h1: ({ node, ...props }) => <h1 className="text-3xl font-bold text-blue-700 mb-5" {...props} />,
+                  h2: ({ node, ...props }) => <h2 className="text-2xl font-semibold text-blue-600 mt-5 mb-3" {...props} />,
+                  p: ({ node, ...props }) => <p className="text-gray-700 mb-4 leading-relaxed" {...props} />,
+                  ul: ({ node, ...props }) => <ul className="list-disc pl-8 mb-5 space-y-3" {...props} />,
+                  ol: ({ node, ...props }) => <ol className="list-decimal pl-8 mb-5 space-y-3" {...props} />,
+                  li: ({ node, ...props }) => <li className="text-gray-600" {...props} />,
+                  strong: ({ node, ...props }) => <strong className="font-semibold text-blue-800" {...props} />,
+                  a: ({ node, ...props }) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
+                }}
+              >
+                {plan}
+              </ReactMarkdown>
+            </motion.div>
+          )}
+
+          {/* Photos Section */}
+          {activeSection === 'photos' && !loading && images.length > 0 && (
+            <motion.div
+              className="bg-white rounded-3xl shadow-2xl p-8 h-120 overflow-auto"
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
+              <h2 className="text-3xl font-semibold text-blue-700 mb-6">
+                {destination} Through the Lens
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {images.map((image, index) => (
+                  <motion.div
+                    key={index}
+                    className="rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <img src={image.largeImageURL} alt={image.tags} className="w-full h-auto object-cover" />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* About Section */}
+          {activeSection === 'about' && !loadingNews && locationBio && (
+            <motion.div
+              className="bg-white rounded-3xl shadow-2xl p-8 h-120 overflow-auto"
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
+              <h2 className="text-3xl font-semibold text-blue-700 mb-6">
+                Discover {destination}
+              </h2>
+              <div className="flex flex-col items-center">
+                <motion.img
+                  src={locationImage}
+                  alt={`${destination} image`}
+                  className="w-32 h-32 sm:w-48 sm:h-48 object-cover rounded-full shadow-md mb-5"
+                  whileHover={{ scale: 1.1 }}
+                />
+                <p className="text-gray-600 text-center text-lg leading-relaxed">
+                  {locationBio}
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* News Section */}
+          {activeSection === 'news' && !loadingNews && news.length > 0 && (
+            <motion.div
+              className="bg-white rounded-3xl shadow-2xl p-8 h-120 overflow-auto"
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
+              <h2 className="text-3xl font-semibold text-blue-700 mb-6">
+                What's Happening in {destination}
+              </h2>
+              <ul className="space-y-5">
+                {news.map((item, index) => (
+                  <li key={index} className="flex items-start space-x-4">
+                    <IoIosArrowDown className="mt-1 text-blue-500 text-xl" />
+                    <div>
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-blue-600 hover:underline text-lg"
+                      >
+                        {item.title}
+                      </a>
+                      <p className="text-gray-600 text-base leading-relaxed">
+                        {item.description}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
