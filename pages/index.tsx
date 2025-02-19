@@ -303,7 +303,7 @@ const Index = () => {
                     <div className="lg:hidden bg-white p-4 shadow-md flex justify-around items-center sticky top-0 z-50 rounded-b-lg">
                         {['plan', 'about', 'photos', 'news'].map((section) => (
                             <div key={section} className="relative">
-                                {/* <motion.button
+                                <motion.button
                                     className={`py-2 px-4 rounded-full text-base font-medium ${activeSection === section ? 'text-blue-700' : 'text-gray-600 hover:text-blue-500'} transition-colors duration-300 focus:outline-none`}
                                     onClick={() => setActiveSection(section as 'plan' | 'about' | 'photos' | 'news')}
                                     disabled={loading || (section === 'news' && !planGenerated)}
@@ -311,7 +311,7 @@ const Index = () => {
                                     whileTap={{ scale: 0.95 }}
                                 >
                                     {section.charAt(0).toUpperCase() + section.slice(1)}
-                                </motion.button> */}
+                                </motion.button>
                             </div>
                         ))}
                     </div>
