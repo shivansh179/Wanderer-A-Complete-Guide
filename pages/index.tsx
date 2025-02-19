@@ -49,9 +49,7 @@ const Index = () => {
         setPlanGenerated(true);
 
         try {
-            if (!GEMINI_API_KEY) {
-                throw new Error("Gemini API key is missing. Please set the NEXT_PUBLIC_GEMINI_API_KEY environment variable.");
-            }
+            
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
