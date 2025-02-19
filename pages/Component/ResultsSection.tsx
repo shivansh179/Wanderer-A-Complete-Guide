@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useSpring, animated } from 'react-spring';
 import PlanDisplay from './PlanDisplay';
-import PhotoGallery from './PhotoGallery';
+import PhotoGallery from './Gallery';
 import NewsDisplay from './NewsDisplay';
 import AboutLocation from './AboutLocation';
 

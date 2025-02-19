@@ -8,7 +8,7 @@ interface NewsDisplayProps {
     sectionVariants: any;
 }
 
-const NewsDisplay: React.FC<NewsDisplayProps> = ({ news, destination, sectionVariants }) => {
+const NewsDisplay: React.FC<NewsDisplayProps> = ({ news = [], destination, sectionVariants }) => { // Provide a default value
     return (
         <motion.div
             className="bg-white rounded-3xl shadow-md p-6 overflow-auto"
