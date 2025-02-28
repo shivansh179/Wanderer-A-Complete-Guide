@@ -60,8 +60,8 @@ const Index = () => {
         <Link href='/'>
         <div className="flex items-center gap-2">
         
-            <GiFeatheredWing className='text-cyan-600 text-2xl' />
-            <h3 className='font-mono text-cyan-600 text-2xl'>Wanderer</h3>
+            <GiFeatheredWing className='text-cyan-700 text-2xl' />
+            <h3 className='font-mono text-cyan-700 text-2xl'>Wanderer</h3>
          
         </div>
         </Link>
@@ -69,11 +69,11 @@ const Index = () => {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-4">
           <Link href="/">
-            <button className="px-10 py-2 text-cyan-500 font-semibold hover:border-2 hover:border-cyan-600 transition rounded-full border border-transparent">
+            <button className="px-10 py-2 text-cyan-500 font-semibold hover:border-2 hover:border-cyan-700 transition rounded-full border border-transparent">
               Home
             </button>
           </Link>
-          <button onClick={handlePlanClick} className="px-10 py-2 text-cyan-500 font-semibold hover:border-cyan-600 transition rounded-full border border-transparent">
+          <button onClick={handlePlanClick} className="px-10 py-2 text-cyan-500 font-semibold hover:border-cyan-700 transition rounded-full border border-transparent">
             Plan
           </button>
         </div>
@@ -100,12 +100,12 @@ const Index = () => {
           ) : (
             <>
               <Link href="/Component/Login">
-                <button className="px-4 py-2 text-black hover:text-cyan-600 transition rounded-full border-2 border-transparent hover:border-cyan-500">
+                <button className="px-4 py-2 text-black hover:text-cyan-700 transition rounded-full border-2 border-transparent hover:border-cyan-500">
                   Sign Up
                 </button>
               </Link>
               <Link href="/Component/Login">
-                <button className="px-4 py-2 text-black hover:text-cyan-600 transition rounded-full border-2 border-transparent hover:border-cyan-500">
+                <button className="px-4 py-2 text-black hover:text-cyan-700 transition rounded-full border-2 border-transparent hover:border-cyan-500">
                   Login
                 </button>
               </Link>
@@ -129,7 +129,7 @@ const Index = () => {
               <Link href="/">
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full text-left px-4 py-2 text-cyan-500 font-semibold hover:border-2 hover:border-cyan-600 transition rounded-full border border-transparent"
+                  className="w-full text-left px-4 py-2 text-cyan-700 font-semibold hover:border-2 hover:border-cyan-700 transition rounded-full border border-transparent"
                 >
                   Home
                 </button>
@@ -138,7 +138,7 @@ const Index = () => {
             <li>
               <button
                 onClick={handlePlanClick}
-                className="w-full text-left px-4 py-2 text-cyan-500 font-semibold hover:border-2 hover:border-cyan-600 transition rounded-full border border-transparent"
+                className="w-full text-left px-4 py-2 text-cyan-700 font-semibold hover:border-2 hover:border-cyan-700 transition rounded-full border border-transparent"
               >
                 Plan
               </button>
@@ -161,7 +161,7 @@ const Index = () => {
                   <Link href="/Component/Login">
                     <button
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="w-full text-left px-4 py-2 text-black hover:text-cyan-600 transition rounded-full border-2 border-transparent hover:border-cyan-500"
+                      className="w-full text-left px-4 py-2 text-black hover:text-cyan-700 transition rounded-full border-2 border-transparent hover:border-cyan-500"
                     >
                       Sign Up
                     </button>
@@ -171,7 +171,7 @@ const Index = () => {
                   <Link href="/Component/Login">
                     <button
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="w-full text-left px-4 py-2 text-black hover:text-cyan-600 transition rounded-full border-2 border-transparent hover:border-cyan-500"
+                      className="w-full text-left px-4 py-2 text-black hover:text-cyan-700 transition rounded-full border-2 border-transparent hover:border-cyan-500"
                     >
                       Login
                     </button>
@@ -191,7 +191,7 @@ const Index = () => {
             <p className="text-gray-600 mt-2">You need to log in to access the Plan feature.</p>
             <div className="mt-4 flex justify-end">
               <Link href="/Component/Login">
-                <button className="flex items-center px-4 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 transition" onClick={() => setShowModal(false)}>
+                <button className="flex items-center px-4 py-2 bg-cyan-700 text-white rounded-md hover:bg-cyan-700 transition" onClick={() => setShowModal(false)}>
                   Login <IoIosArrowForward className="ml-2" />
                 </button>
               </Link>

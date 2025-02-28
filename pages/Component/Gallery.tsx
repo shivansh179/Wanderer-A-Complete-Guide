@@ -54,7 +54,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({
       animate="visible"
       exit="hidden"
     >
-      <h2 className="text-2xl sm:text-3xl font-semibold text-blue-700 mb-4">
+      <h2 className="text-2xl sm:text-3xl font-semibold text-cyan-700 mb-4">
         {destination === previousValue ?
           destination.charAt(0).toUpperCase() + destination.slice(1)
           : previousValue} Through the Lens
@@ -63,7 +63,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({
       {/* Media Type Toggle Buttons */}
       <div className="flex space-x-4 mb-4">
         <motion.button
-          className={`py-2 px-4 rounded-full text-base font-medium flex items-center space-x-2 ${activeMediaType === 'photos' ? 'bg-blue-200 text-blue-700' : 'text-gray-600 hover:text-blue-500'} transition-colors duration-300 focus:outline-none`}
+          className={`py-2 px-4 rounded-full text-base font-medium flex items-center space-x-2 ${activeMediaType === 'photos' ? 'bg-cyan-200 text-cyan-700' : 'text-gray-600 hover:text-cyan-500'} transition-colors duration-300 focus:outline-none`}
           onClick={() => switchMediaType('photos')}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -72,7 +72,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({
           <span>Photos</span>
         </motion.button>
         <motion.button
-          className={`py-2 px-4 rounded-full text-base font-medium flex items-center space-x-2 ${activeMediaType === 'videos' ? 'bg-blue-200 text-blue-700' : 'text-gray-600 hover:text-blue-500'} transition-colors duration-300 focus:outline-none`}
+          className={`py-2 px-4 rounded-full text-base font-medium flex items-center space-x-2 ${activeMediaType === 'videos' ? 'bg-cyan-200 text-cyan-700' : 'text-gray-600 hover:text-cyan-500'} transition-colors duration-300 focus:outline-none`}
           onClick={() => switchMediaType('videos')}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -153,7 +153,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({
       {activeMediaType === 'photos' && hasMore && !imageLoading && (
         <div className="flex justify-center py-4">
           <motion.button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             onClick={loadMore}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -167,7 +167,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({
       {activeMediaType === 'videos' && hasMore && !imageLoading && (
         <div className="flex justify-center py-4">
           <motion.button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             onClick={fetchVideos}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

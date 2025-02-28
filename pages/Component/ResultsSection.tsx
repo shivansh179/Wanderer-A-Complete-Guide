@@ -16,6 +16,7 @@ interface ResultsSectionProps {
     news: any[]; // Replace `any` with the actual type of your news data
     locationImage: string;
     locationBio: string;
+    location: string;
     images: any[]; // Replace `any` with the actual type of your image data
     imageLoading: boolean;
     hasMore: boolean;
@@ -34,6 +35,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
     plan,
     activeSection,
     setActiveSection,
+    location,
     planGenerated,
     news,
     locationImage,
@@ -68,7 +70,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
                 {['plan', 'about', 'photos', 'news'].map((section) => (
                     <div key={section} className="relative">
                         <motion.button
-                            className={`py-2 px-4 rounded-full text-base font-medium ${activeSection === section ? 'text-blue-700' : 'text-gray-600 hover:text-blue-500'} transition-colors duration-300 focus:outline-none`}
+                            className={`py-2 px-4 rounded-full text-base font-medium ${activeSection === section ? 'text-cyan-700' : 'text-gray-600 hover:text-cyan-500'} transition-colors duration-300 focus:outline-none`}
                             onClick={() => setActiveSection(section as 'plan' | 'about' | 'photos' | 'news')}
                             disabled={loading || (section === 'news' && !planGenerated)}
                             whileHover={{ scale: 1.1 }}
@@ -147,7 +149,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
             )}
 
             {activeSection === 'news' && !loading && news.length > 0 && (
-                <NewsDisplay news={news} destination={destination} sectionVariants={sectionVariants} />
+                <NewsDisplay news={news} destination={location} sectionVariants={sectionVariants} />
             )}
 
         </div>

@@ -52,7 +52,7 @@ const InputForm: React.FC<InputFormProps> = ({
             transition={{ duration: 0.2 }}
         >
             <div className="mb-6">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-800 mb-2 tracking-tight">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-cyan-800 mb-2 tracking-tight">
                     Wanderer: Your AI Trip Planner
                 </h1>
                 <p className="text-gray-600 text-lg leading-relaxed">
@@ -67,7 +67,7 @@ const InputForm: React.FC<InputFormProps> = ({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Starting Point</label>
                         <input
                             type="text"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all text-gray-700"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                             value={startLocation}
                             onChange={(e) => setStartLocation(e.target.value)}
                             placeholder="Enter your starting location"
@@ -77,7 +77,7 @@ const InputForm: React.FC<InputFormProps> = ({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
                         <input
                             type="text"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all text-gray-700"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                             value={destination}
                             onChange={(e) => setDestination(e.target.value)}
                             placeholder="Enter your destination"
@@ -98,7 +98,7 @@ const InputForm: React.FC<InputFormProps> = ({
                         <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
                         <input
                             type={type}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all text-gray-700"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                             value={state}
                             onChange={(e) => setState(e.target.value)}
                             placeholder={`Enter your ${label.toLowerCase()}`}
@@ -107,7 +107,7 @@ const InputForm: React.FC<InputFormProps> = ({
                 ))}
 
                 <motion.button
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    className="w-full bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white font-semibold py-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50"
                     onClick={planFetcher}
                     disabled={loading || imageLoading}
                     whileHover={{ scale: 1.05 }}

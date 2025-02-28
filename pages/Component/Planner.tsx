@@ -38,7 +38,7 @@ const Index = () => {
     const [currentValue, setCurrentValue] = useState('');
     const [previousValue, setPreviousValue] = useState('');
     const [imageFetchDestination, setImageFetchDestination] = useState(''); // Separate state for image fetch
-
+    const[location, setLocation] = useState('');
     const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU';
     const PEXELS_API_KEY = '2wBg5SOXdnIFQApqDr5zTPq8MjvJGCcmXtIa3orVKwYe94fRNfZzuSwW'; // Replace with your actual API key
 
@@ -50,6 +50,11 @@ const Index = () => {
         setLoading(true);
         setError(null);
         setPlanGenerated(true);
+
+         if(destination != location){
+                fetchAboutLocation(destination);
+            }
+        
 
         try {
             
@@ -74,6 +79,8 @@ const Index = () => {
                 }
             );
 
+          
+             
             const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
             setPlan(extractedPlan);
 
@@ -93,6 +100,14 @@ const Index = () => {
             setActiveSection('plan');
             setPreviousValue(destination);
             setCurrentValue(destination);
+            // setLocation(destination);
+            setLocation(destination);
+            if(destination === location){
+                fetchNewsForDestination(location);
+            }
+            else{
+                fetchNewsForDestination(destination);
+             }
         } catch (err: any) {
             console.error('Error fetching the plan:', err);
             setError(err.message || 'Failed to fetch the plan. Please try again.');
@@ -101,6 +116,63 @@ const Index = () => {
             setLoading(false);
         }
     };
+
+    const fetchAboutLocation = async (location: string) => {
+        setLoading(true);
+        setError(null);
+     
+        try {
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                {
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: `I’m planning to travel to ${location}. Could you provide a detailed guide about the place, including:
+    
+                                            1. Historical Background:
+                                               * A brief history of the city/country, including significant events, cultural shifts, and famous historical landmarks.
+                                            
+                                            2. Cultural Insights:
+                                                * Local customs, traditions, language, and important cultural aspects that would enrich my understanding and    interaction with locals.
+                                            
+                                            3. Top Attractions:
+                                               * The best places to visit, including popular tourist destinations, hidden gems, and landmarks that reflect the city's heritage and culture.
+                                               * Details on must-see museums, historical sites, and natural wonders in and around the destination.
+                                            
+                                            4. Local Cuisine:
+                                                * The best local foods and dishes to try, including any famous restaurants or markets known for authentic culinary experiences.
+    
+                                            5. Unique Experiences:
+                                                * Special activities or experiences unique to the destination (festivals, art scenes, adventure sports, etc.) that should not be missed.
+                                            
+                                            6. Practical Travel Tips:
+                                                * Local transportation options, the best time to visit (season/weather), safety tips, and any important travel regulations or recommendations for tourists.
+                                            
+                                            Please tailor the information to a first-time traveler who wants to explore both the well-known and off-the-beaten-path experiences, focusing on immersive and educational travel.`
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }
+            );
+    
+            setLocationBio(response.data.candidates[0].content.parts[0].text);
+        } catch (err: any) {
+            console.error('Error fetching the plan:', err);
+            setError(err.message || 'Failed to fetch the plan. Please try again.');
+            setPlan('');
+        } finally {
+            setLoading(false);
+        }
+    };
+    
 
     const imageFetcher = async (query: string) => {
         setImageLoading(true);
@@ -182,34 +254,36 @@ const Index = () => {
     };
 
 
-    const fetchNewsForDestination = async (destination: string) => {
+    const fetchNewsForDestination = async (location: string) => {
         setLoadingNews(true);
         setError(null);
 
         try {
-            const response = await axios.post('/api/news', { location: destination });
-            if (response.status === 500) {
-                alert("It is just a reminder !!! Try providing the complete name of destination for better experience");
-            }
-            if (response.status === 200) {
-                setNews(response.data);
-                console.log("the news are ", response.data);
-                // Extract image and bio from the end of the array
-                const lastItem = response.data[response.data.length - 2];
-                const secondLastItem = response.data[response.data.length - 1];
-
-                if (lastItem && lastItem.image) {
-                    setLocationImage(lastItem.image.url);
+                 const response = await axios.post('/api/news', { location: location });
+                if (response.status === 500) {
+                    alert("It is just a reminder !!! Try providing the complete name of destination for better experience");
                 }
-
-                if (secondLastItem && secondLastItem.bio) {
-                    setLocationBio(secondLastItem.bio);
+                if (response.status === 200) {
+                    console.log("news reponse is ", response);
+                    
+                    setNews(response.data);
+                    console.log("the news are ", response.data);
+                    // Extract image and bio from the end of the array
+                    const lastItem = response.data[response.data.length - 2];
+                    const secondLastItem = response.data[response.data.length - 1];
+    
+                    if (lastItem && lastItem.image) {
+                        setLocationImage(lastItem.image.url);
+                    }
+    
+                     
+                 } else {
+                    setError('Failed to fetch news.');
+                    console.error('Error fetching news:', response.status, response.data);
+                    setNews([]);
                 }
-            } else {
-                setError('Failed to fetch news.');
-                console.error('Error fetching news:', response.status, response.data);
-                setNews([]);
-            }
+            
+         
         } catch (error) {
             setError('Failed to fetch news.');
             console.error('Error fetching news:', error);
@@ -219,11 +293,11 @@ const Index = () => {
         }
     };
 
-    useEffect(() => {
-        if (planGenerated && destination) {
-            fetchNewsForDestination(destination);
-        }
-    }, [destination, planGenerated]);
+    // useEffect(() => {
+    //     if (planGenerated && destination) {
+    //         fetchNewsForDestination(destination);
+    //     }
+    // }, [destination, planGenerated]);
 
     const isActive = () => {
         setImagePower(!imagePower);
@@ -295,7 +369,7 @@ const Index = () => {
         <AuthGuard>
             <Navbar />
             <motion.div
-                className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-6"
+                className="min-h-screen bg-gradient-to-br from-cyan-50 to-cyan-100 py-6"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -307,7 +381,7 @@ const Index = () => {
                         {['plan', 'about', 'photos', 'news'].map((section) => (
                             <div key={section} className="relative">
                                 <motion.button
-                                    className={`py-2 px-4 rounded-full text-base font-medium ${activeSection === section ? 'text-blue-700' : 'text-gray-600 hover:text-blue-500'} transition-colors duration-300 focus:outline-none`}
+                                    className={`py-2 px-4 rounded-full text-base font-medium ${activeSection === section ? 'text-cyan-700' : 'text-gray-600 hover:text-cyan-500'} transition-colors duration-300 focus:outline-none`}
                                     onClick={() => setActiveSection(section as 'plan' | 'about' | 'photos' | 'news')}
                                     disabled={loading || (section === 'news' && !planGenerated)}
                                     whileHover={{ scale: 1.1 }}
@@ -319,54 +393,68 @@ const Index = () => {
                         ))}
                     </div>
 
-                    <div className="grid lg:grid-cols-2 gap-6 mt-10">
-                        {/* Left Column - Input Form */}
-                        <InputForm
-                            startLocation={startLocation}
-                            setStartLocation={setStartLocation}
-                            destination={destination}
-                            setDestination={setDestination}
-                            days={days}
-                            setDays={setDays}
-                            budget={budget}
-                            setBudget={setBudget}
-                            peopleCount={peopleCount}
-                            setPeopleCount={setPeopleCount}
-                            ladiesCount={ladiesCount}
-                            setLadiesCount={setLadiesCount}
-                            elderlyCount={elderlyCount}
-                            setElderlyCount={setElderlyCount}
-                            childrenCount={childrenCount}
-                            setChildrenCount={setChildrenCount}
-                            loading={loading}
-                            planFetcher={planFetcher}
-                            imageLoading={imageLoading}
-                        />
+                    <div className={`flex gap-6 mt-10 transition-all duration-700 ease-in-out`}>
+  {/* Left Column - Input Form */}
+  <div
+    className={`transition-all duration-700 ease-in-out ${
+      plan ? 'w-full lg:w-1/2' : 'w-full lg:w-full'
+    }`}
+  >
+    <InputForm
+      startLocation={startLocation}
+      setStartLocation={setStartLocation}
+      destination={destination}
+      setDestination={setDestination}
+      days={days}
+      setDays={setDays}
+      budget={budget}
+      setBudget={setBudget}
+      peopleCount={peopleCount}
+      setPeopleCount={setPeopleCount}
+      ladiesCount={ladiesCount}
+      setLadiesCount={setLadiesCount}
+      elderlyCount={elderlyCount}
+      setElderlyCount={setElderlyCount}
+      childrenCount={childrenCount}
+      setChildrenCount={setChildrenCount}
+      loading={loading}
+      planFetcher={planFetcher}
+      imageLoading={imageLoading}
+    />
+  </div>
 
-                        {/* Right Column - Results */}
-                        <ResultsSection
-                            loading={loading}
-                            error={error}
-                            plan={plan}
-                            activeSection={activeSection}
-                            setActiveSection={setActiveSection}
-                            planGenerated={planGenerated}
-                            news={news}
-                            locationImage={locationImage}
-                            locationBio={locationBio}
-                            images={images}
-                            imageLoading={imageLoading}
-                            hasMore={hasMore}
-                            loadMore={loadMore}
-                            fetchNewsForDestination={fetchNewsForDestination}
-                            destination={destination}
-                            videos={videos}
-                            fetchVideos={fetchVideos}
-                            previousValue={previousValue}
-                            activeMediaType={activeMediaType}
-                            switchMediaType={switchMediaType}
-                        />
-                    </div>
+  {/* Right Column - Results */}
+  {plan && (
+    <div
+      className={`transition-all duration-700 ease-in-out lg:w-1/2`}
+    >
+      <ResultsSection
+        loading={loading}
+        error={error}
+        plan={plan}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        location={location}
+        planGenerated={planGenerated}
+        news={news}
+        locationImage={locationImage}
+        locationBio={locationBio}
+        images={images}
+        imageLoading={imageLoading}
+        hasMore={hasMore}
+        loadMore={loadMore}
+        fetchNewsForDestination={fetchNewsForDestination}
+        destination={destination}
+        videos={videos}
+        fetchVideos={fetchVideos}
+        previousValue={previousValue}
+        activeMediaType={activeMediaType}
+        switchMediaType={switchMediaType}
+      />
+    </div>
+  )}
+</div>
+
                     </div>
                 </motion.div>
         </AuthGuard>
