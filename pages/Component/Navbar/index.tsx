@@ -30,14 +30,16 @@ const Index = () => {
     });
     return () => unsubscribe();
   }, []);
-
   const handleLogout = async () => {
     try {
-      await firebaseSignOut(auth);
-      signOut();
+      await firebaseSignOut(auth); // Firebase sign-out
+      await signOut(); // NextAuth or other sign-out function
+  
       setUser(null);
       setDropdownOpen(false);
       setIsMobileMenuOpen(false);
+  
+      console.log("Logged out successfully");
     } catch (error) {
       console.error("Error signing out:", error);
     }

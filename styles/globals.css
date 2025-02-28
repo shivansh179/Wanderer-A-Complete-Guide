@@ -2,20 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Professional Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Lora:wght@400;600&family=Poppins:wght@300;400;600;700&display=swap');
+
+/* Light & Dark Mode Variables */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary-color: #1e3a5f; /* Deep Blue for a formal touch */
+  --secondary-color: #f4a261; /* Elegant warm accent */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #121212; /* Softer dark background */
+    --foreground: #e6e6e6; /* Lighter text for readability */
   }
 }
 
+/* Global Styles */
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', sans-serif; /* Default: Inter for readability */
+}
+
+/* Headings - Classy & Formal */
+h1, h2, h3 {
+  font-family: 'Lora', serif; /* Adds sophistication */
+}
+
+/* Buttons - Clean & Modern */
+button {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  transition: all 0.3s ease-in-out;
+}
+
+button:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+/* Link Styling */
+a {
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: var(--secondary-color);
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
 }
