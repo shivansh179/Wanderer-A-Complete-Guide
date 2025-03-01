@@ -1,12 +1,62 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/pages/Component/Navbar';
-import axios from 'axios';
-import InputForm from './InputForm';
-import ResultsSection from './ResultsSection';
-import { Image, NewsItem, Video } from '@/types/types';
-import { motion } from 'framer-motion';
+import { auth, onAuthStateChanged } from '@/FirebaseCofig'; // Import Firebase Auth
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'; // Import Firestore methods
+import { User } from 'firebase/auth';
 
 const Index = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [showReligionDialog, setShowReligionDialog] = useState(false);
+  const [name, setName] = useState('');
+  const [religion, setReligion] = useState('');
+  const [favoritePlaces, setFavoritePlaces] = useState('');
+  const [believerOfGod, setBelieverOfGod] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUser(user);
+
+        const db = getFirestore(); // Get Firestore instance
+        const userDocRef = doc(db, 'users', user.email || 'default-email');
+        const docSnapshot = await getDoc(userDocRef);
+
+        if (!docSnapshot.exists()) {
+          // User is new, show the dialog to ask for more details
+          setIsNewUser(true);
+          setShowReligionDialog(true);
+        } else {
+          // User has entries in Firestore
+          setIsNewUser(false);
+        }
+      } else {
+        // User is not logged in
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleSubmit = async () => {
+    if (name.trim() && religion.trim() && favoritePlaces.trim()) {
+      if (user && user.email) {
+        const db = getFirestore(); // Get Firestore instance
+        await setDoc(doc(db, 'users', user.email), {
+          name: name,
+          religion: religion,
+          favoritePlaces: favoritePlaces,
+          believerOfGod: believerOfGod,
+          subscribed: false,
+
+        });
+
+        setShowReligionDialog(false); // Close the dialog
+      }
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -103,62 +153,74 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Section 3: Image and Text (Alternating Layout) */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="md:w-1/2">
-                <img
-                  src="/adventure.jpg"
-                  alt="Adventure 1"
-                  className="rounded-lg shadow-lg w-full object-cover h-64 md:h-96"
-                />
-              </div>
-              <div className="md:w-1/2 text-center md:text-left">
-                <h2 className="font-semibold text-4xl md:text-6xl text-gray-800 mb-4">
-                  Unleash Your Inner Adventurer
-                </h2>
-                <p className="text-gray-700 font-bold leading-relaxed">
-                  Embark on thrilling adventures that will push your limits and create lasting memories. From hiking through rainforests to exploring ancient ruins, we have an adventure for everyone.
-                </p>
-                <ul className="list-disc list-inside mt-4 text-gray-700">
-                  <li>Guided Tours</li>
-                  <li>Expert Local Guides</li>
-                  <li>Customizable Itineraries</li>
-                  <li>Sustainable Travel Practices</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Religion Dialog */}
+        {showReligionDialog && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full">
+              <h3 className="text-2xl font-semibold text-gray-800 mb-4">Please Share Your Details</h3>
 
-        {/* Section 4: Image and Text (Reverse Order) */}
-        <section className="py-16 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="md:w-1/2 order-2 md:order-1 text-center md:text-left">
-                <h2 className="font-semibold text-4xl md:text-6xl text-gray-800 mb-4">
-                  Discover Hidden Gems
-                </h2>
-                <p className="text-gray-700 font-bold leading-relaxed">
-                  Venture off the beaten path and discover the world's best-kept secrets. Our local experts will guide you to unique and authentic experiences.
-                </p>
-                <p className="text-gray-700 mt-4 leading-relaxed">
-                  Support local communities and immerse yourself in the culture of your destination.
-                </p>
+              <input
+                type="text"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
+              />
+              
+              <input
+                type="text"
+                placeholder="Enter your religion"
+                value={religion}
+                onChange={(e) => setReligion(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
+              />
+
+              {/* Favorite Places Dropdown */}
+              <select
+                value={favoritePlaces}
+                onChange={(e) => setFavoritePlaces(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
+              >
+                <option value="">Select your favorite type of place</option>
+                <option value="Historical">Historical</option>
+                <option value="Nature">Nature</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Beaches">Beaches</option>
+                <option value="Cultural">Cultural</option>
+              </select>
+
+              <label className="block mb-2 text-gray-700">Are you a believer of God?</label>
+              <div className="flex gap-4">
+                <label>
+                  <input
+                    type="radio"
+                    name="believerOfGod"
+                    checked={believerOfGod}
+                    onChange={() => setBelieverOfGod(true)}
+                  />
+                  Yes
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="believerOfGod"
+                    checked={!believerOfGod}
+                    onChange={() => setBelieverOfGod(false)}
+                  />
+                  No
+                </label>
               </div>
-              <div className="md:w-1/2 order-1 md:order-2">
-                <img
-                  src="/trekking.jpg"
-                  alt="Culture 1"
-                  className="rounded-lg shadow-lg w-full object-cover h-64 md:h-96"
-                />
-              </div>
+
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition mt-4"
+              >
+                Submit
+              </button>
             </div>
           </div>
-        </section>
+        )}
       </div>
-      {/* <Footer /> */}
     </>
   );
 };

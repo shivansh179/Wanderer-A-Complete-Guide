@@ -1,15 +1,20 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { onAuthStateChanged } from 'firebase/auth'; // Import onAuthStateChanged
 import Navbar from '@/pages/Component/Navbar';
 import axios from 'axios';
+import { auth } from '@/FirebaseCofig'; // Import the auth instance
 import InputForm from './InputForm';
 import ResultsSection from './ResultsSection';
 import { Image, NewsItem, Video } from '@/types/types';
 import { motion } from 'framer-motion';
 import AuthGuard from '../AuthGuard/AuthGuard';
-
+import { getFirestore, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
+import router from 'next/router';
 
 const Index = () => {
+    const [user, setUser] = useState<any>(null); // State for storing the authenticated user
     const [startLocation, setStartLocation] = useState('');
     const [destination, setDestination] = useState('');
     const [days, setDays] = useState('');
@@ -38,7 +43,7 @@ const Index = () => {
     const [currentValue, setCurrentValue] = useState('');
     const [previousValue, setPreviousValue] = useState('');
     const [imageFetchDestination, setImageFetchDestination] = useState(''); // Separate state for image fetch
-    const[location, setLocation] = useState('');
+    const [location, setLocation] = useState('');
     const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU';
     const PEXELS_API_KEY = '2wBg5SOXdnIFQApqDr5zTPq8MjvJGCcmXtIa3orVKwYe94fRNfZzuSwW'; // Replace with your actual API key
 
@@ -46,24 +51,153 @@ const Index = () => {
     const [planGenerated, setPlanGenerated] = useState(false);
     const [lastDestination, setLastDestination] = useState(''); // Store the last destination for which images/videos were fetched
 
-    const planFetcher = async () => {
+    const [tripForFamily, setTripForFamily] = useState(false); // Track if the trip is for family
+    const [familyElderlyCount, setFamilyElderlyCount] = useState('');
+    const [familyLadiesCount, setFamilyLadiesCount] = useState('');
+    const [familyChildrenCount, setFamilyChildrenCount] = useState('');
+    const [familyPreferences, setFamilyPreferences] = useState('');
+    const [showModal, setShowModal] = useState(false);
+    
+
+    // Fetch user details from Firestore based on authenticated user email
+    const fetchUserDetailsFromFirestore = async (userEmail: string) => {
+        const db = getFirestore(); // Get Firestore instance
+        const userDocRef = doc(db, 'users', userEmail); // Assuming the document ID is user's email
+        const docSnapshot = await getDoc(userDocRef);
+      
+        if (docSnapshot.exists()) {
+          return docSnapshot.data();
+        } else {
+          console.warn("No user data found in Firestore.");
+          return null;
+        }
+      };
+      
+      const db = getFirestore();
+
+      const incrementPlanGenerationCount = async (userEmail: string) => {
+        const userDocRef = doc(db, 'users', userEmail);  // Reference to the user's document
+        
+        try {
+          const userDoc = await getDoc(userDocRef); // Get the user's document
+          
+          if (userDoc.exists()) {
+            const currentCount = userDoc.data()?.planGenerationCount || 0; // Default to 0 if not set
+            await updateDoc(userDocRef, {
+              planGenerationCount: currentCount + 1,  // Increment the count
+            });
+            console.log('Plan count updated successfully');
+          } else {
+            // If the user doesn't have the field, initialize it
+            await updateDoc(userDocRef, {
+              planGenerationCount: 1,  // Initialize the count if the document exists but the count is missing
+            });
+            console.log('Initialized plan count');
+          }
+        } catch (error) {
+          console.error('Error updating plan generation count:', error);
+        }
+      };
+
+      // Fetch user data once the user is authenticated
+      useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
+          if (authenticatedUser && authenticatedUser.email) {
+            const userDocRef = doc(db, 'users', authenticatedUser.email);
+            const userDoc = await getDoc(userDocRef);
+            
+            let planGenerationCount = 0;  // Default count
+            if (userDoc.exists()) {
+              planGenerationCount = userDoc.data()?.planGenerationCount || 0; // Retrieve the count or default to 0
+            }
+      
+            // If the count exceeds the limit (3), show the modal
+            if (planGenerationCount <= 3 || authenticatedUser.email === 'prasantshukla89@gmail.com') {
+              setUser(authenticatedUser); // Set the authenticated user to state
+            } else {
+              setShowModal(true);  // Show subscription modal
+              setLoading(false);  // Stop loading
+              return;
+            }
+          } else {
+            setUser(null); // Clear user state if not authenticated
+          }
+        });
+        
+        return unsubscribe;
+      }, []);
+      
+
+      const planFetcher = async () => {
+        setPlan('');
         setLoading(true);
         setError(null);
         setPlanGenerated(true);
-
-         if(destination != location){
-                fetchAboutLocation(destination);
-            }
-
-
-            // fetchWeatherForDestination(destination);
-
+    
+        // Ensure the user is authenticated before fetching data
+        if (!user) {
+            setError('User not authenticated.');
+            setLoading(false);
+            return;
+        }
+    
+        // Fetch user details from Firestore using the authenticated user's email
+        const userDetails = await fetchUserDetailsFromFirestore(user.email);
+        console.log(userDetails);
+    
+        if (!userDetails) {
+            setError('Could not fetch user details. Please make sure you are logged in.');
+            setLoading(false);
+            return;
+        }
+    
+        // Initialize plan generation count if not available
+        const userDocRef = doc(db, 'users', user.email);
+        const userDoc = await getDoc(userDocRef);
         
-        
-
+        let planGenerationCount = 0;  // Default count
+        if (userDoc.exists()) {
+            planGenerationCount = userDoc.data()?.planGenerationCount || 0; // Retrieve the count or default to 0
+        }
+    
+        // If the count exceeds the limit (3), show the modal
+        if (planGenerationCount >= 3 && user.email != 'prasantshukla89@gmail.com') {
+            setShowModal(true);  // Show subscription modal
+            setLoading(false);  // Stop loading
+            return;
+        }
+    
+        // Get the necessary data from the user details
+        const { name, religion, favoritePlaces, believerOfGod, age } = userDetails;
+        fetchAboutLocation(destination);
+        // Update the prompt to include user-specific data
+        const userSpecificDetails = `
+            Name: ${name}
+            Religion: ${religion}
+            Favorite Places: ${favoritePlaces}
+            Believer of God: ${believerOfGod ? 'Yes' : 'No'}
+            Age : ${age}
+        `;
+    
+        let travelPlanPrompt = '';
+    
+        if (tripForFamily) {
+            // Family-specific plan generation
+            travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for my family. 
+            They are ${peopleCount} people in total, with ${familyLadiesCount} ladies, ${familyElderlyCount} elders, and ${familyChildrenCount} children. 
+            Total budget is ${budget}. Please consider the following family preferences for travel to create a detailed itinerary: 
+            ${familyPreferences}
+            The itinerary should include family-friendly travel routes, must-visit places, activities, and an estimated budget breakdown. 
+            Additionally, if any members have special needs, include safety tips for elderly, ladies, and children.`;
+        } else {
+            // User-specific plan generation for solo trip
+            travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for myself. 
+            I am traveling alone. My budget is ${budget}. Please consider the following personal details to create a detailed itinerary: 
+            ${userSpecificDetails}
+            The itinerary should include travel routes, must-visit places, activities, and an estimated budget breakdown.`;
+        }
+    
         try {
-            
-
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
                 {
@@ -71,7 +205,7 @@ const Index = () => {
                         {
                             parts: [
                                 {
-                                    text: `I am planning a ${days}-day trip from ${startLocation} to ${destination} and we are total ${peopleCount}, where the ladies are ${ladiesCount}, elders are ${elderlyCount}, and children are ${childrenCount}. My budget is ${budget}. Please provide a detailed itinerary, including travel routes, must-visit places, activities, and an estimated budget breakdown. Ensure it fits within my budget and provide links to relevant images. Also Provide if in this query if i provide ladies and children count > 0 then tell me the safety concerns too regarding that desitnation`
+                                    text: travelPlanPrompt
                                 }
                             ]
                         }
@@ -83,12 +217,10 @@ const Index = () => {
                     }
                 }
             );
-
-          
-             
+    
             const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
             setPlan(extractedPlan);
-
+    
             // Reset image and video pagination when a new plan is fetched
             setImages([]);
             setNextPageUrl('');
@@ -97,26 +229,24 @@ const Index = () => {
             setVideos([]);
             setActiveMediaType('photos');
             setVideoPlaying(null); // Reset video playing state
-            // Clear video refs
-            videoRefs.current = {};
-
-            // Only fetch images when plan is fetched
+            videoRefs.current = {}; // Clear video refs
+    
             setImageFetchDestination(destination); // Set the destination for image fetching
             setActiveSection('plan');
             setPreviousValue(destination);
             setCurrentValue(destination);
-            // setLocation(destination);
             setLocation(destination);
-
-
-            if(destination === location){
+    
+            // Fetch news for the destination
+            if (destination === location) {
                 fetchNewsForDestination(location);
-            }
-            else{
+            } else {
                 fetchNewsForDestination(destination);
-             }
-
-
+            }
+    
+            // Increment the plan generation count for the user
+            incrementPlanGenerationCount(user.email);  // Call this function after the plan is generated
+    
         } catch (err: any) {
             console.error('Error fetching the plan:', err);
             setError(err.message || 'Failed to fetch the plan. Please try again.');
@@ -125,6 +255,7 @@ const Index = () => {
             setLoading(false);
         }
     };
+
 
     const fetchAboutLocation = async (location: string) => {
         setLoading(true);
@@ -405,87 +536,95 @@ const Index = () => {
                 transition={{ duration: 0.5 }}
             >
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Navigation Bar for Mobile */}
-                    <div className="lg:hidden bg-white p-4 shadow-md flex justify-around items-center sticky top-0 z-50 rounded-b-lg">
-                        {['plan', 'about', 'photos', 'news'].map((section) => (
-                            <div key={section} className="relative">
-                                <motion.button
-                                    className={`py-2 px-4 rounded-full text-base font-medium ${activeSection === section ? 'text-cyan-700' : 'text-gray-600 hover:text-cyan-500'} transition-colors duration-300 focus:outline-none`}
-                                    onClick={() => setActiveSection(section as 'plan' | 'about' | 'photos' | 'news')}
-                                    disabled={loading || (section === 'news' && !planGenerated)}
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    {section.charAt(0).toUpperCase() + section.slice(1)}
-                                </motion.button>
-                            </div>
-                        ))}
-                    </div>
-
                     <div className={`flex gap-6 mt-10 transition-all duration-700 ease-in-out`}>
-  {/* Left Column - Input Form */}
-  <div
-    className={`transition-all duration-700 ease-in-out ${
-      plan ? 'w-full lg:w-1/2' : 'w-full lg:w-full'
-    }`}
-  >
-    <InputForm
-      startLocation={startLocation}
-      setStartLocation={setStartLocation}
-      destination={destination}
-      setDestination={setDestination}
-      days={days}
-      setDays={setDays}
-      budget={budget}
-      setBudget={setBudget}
-      peopleCount={peopleCount}
-      setPeopleCount={setPeopleCount}
-      ladiesCount={ladiesCount}
-      setLadiesCount={setLadiesCount}
-      elderlyCount={elderlyCount}
-      setElderlyCount={setElderlyCount}
-      childrenCount={childrenCount}
-      setChildrenCount={setChildrenCount}
-      loading={loading}
-      planFetcher={planFetcher}
-      imageLoading={imageLoading}
-    />
-  </div>
+                        {/* Left Column - Input Form */}
+                        <div
+                            className={`transition-all duration-700 ease-in-out ${
+                                plan ? 'w-full lg:w-1/2' : 'w-full lg:w-full'
+                            }`}
+                        >
+                            <InputForm
+                                startLocation={startLocation}
+                                setStartLocation={setStartLocation}
+                                destination={destination}
+                                setDestination={setDestination}
+                                days={days}
+                                setDays={setDays}
+                                budget={budget}
+                                setBudget={setBudget}
+                                peopleCount={peopleCount}
+                                setPeopleCount={setPeopleCount}
+                                ladiesCount={ladiesCount}
+                                setLadiesCount={setLadiesCount}
+                                elderlyCount={elderlyCount}
+                                setElderlyCount={setElderlyCount}
+                                childrenCount={childrenCount}
+                                setChildrenCount={setChildrenCount}
+                                loading={loading}
+                                planFetcher={planFetcher}
+                                imageLoading={imageLoading}
+                                setTripForFamily={setTripForFamily}
+                                familyElderlyCount={familyElderlyCount}
+                                setFamilyElderlyCount={setFamilyElderlyCount}
+                                familyLadiesCount={familyLadiesCount}
+                                setFamilyLadiesCount={setFamilyLadiesCount}
+                                familyChildrenCount={familyChildrenCount}
+                                setFamilyChildrenCount={setFamilyChildrenCount}
+                                familyPreferences={familyPreferences}
+                                setFamilyPreferences={setFamilyPreferences}
+                            />
+                        </div>
 
-  {/* Right Column - Results */}
-  {plan && (
-    <div
-      className={`transition-all duration-700 ease-in-out lg:w-1/2`}
-    >
-      <ResultsSection
-        loading={loading}
-        error={error}
-        plan={plan}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        location={location}
-        planGenerated={planGenerated}
-        news={news}
-        locationImage={locationImage}
-        locationBio={locationBio}
-        images={images}
-        imageLoading={imageLoading}
-        hasMore={hasMore}
-        loadMore={loadMore}
-        fetchNewsForDestination={fetchNewsForDestination}
-        destination={destination}
-        videos={videos}
-        fetchVideos={fetchVideos}
-        previousValue={previousValue}
-        activeMediaType={activeMediaType}
-        switchMediaType={switchMediaType}
-      />
-    </div>
-  )}
-</div>
-
+                        {/* Right Column - Results */}
+                        {plan && (
+                            <div className={`transition-all duration-700 ease-in-out lg:w-1/2`}>
+                                <ResultsSection
+                                    loading={loading}
+                                    error={error}
+                                    plan={plan}
+                                    activeSection={activeSection}
+                                    setActiveSection={setActiveSection}
+                                    location={location}
+                                    planGenerated={planGenerated}
+                                    news={news}
+                                    locationImage={locationImage}
+                                    locationBio={locationBio}
+                                    images={images}
+                                    imageLoading={imageLoading}
+                                    hasMore={hasMore}
+                                    loadMore={loadMore}
+                                    fetchNewsForDestination={fetchNewsForDestination}
+                                    destination={destination}
+                                    videos={videos}
+                                    fetchVideos={fetchVideos}
+                                    previousValue={previousValue}
+                                    activeMediaType={activeMediaType}
+                                    switchMediaType={switchMediaType}
+                                />
+                            </div>
+                        )}
                     </div>
-                </motion.div>
+                </div>
+            </motion.div>
+
+
+            {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-md">
+            <h2 className="text-lg font-semibold text-gray-800">Subscription Expired</h2>
+            <p className="text-gray-600 mt-2">Your free trial is over. Please subscribe to continue using the service.</p>
+            <div className="mt-4 flex justify-end">
+            <button className="ml-2 px-4 py-2 text-white bg-indigo-500 border rounded-md hover:bg-cyan-900  hover:text-black transition" onClick={() => router.push('/Component/Subscribe')}>
+                Subscribe
+              </button>
+              <button className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition" onClick={() => router.push('/')}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
         </AuthGuard>
     );
 };

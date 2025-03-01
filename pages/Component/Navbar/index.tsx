@@ -10,6 +10,7 @@ import { auth } from '@/FirebaseCofig';
 import { signOut as firebaseSignOut, onAuthStateChanged, User } from 'firebase/auth';
 import { GiFeatheredWing } from "react-icons/gi";
 import { IoIosArrowForward } from "react-icons/io";
+import { doc, getDoc, getFirestore } from 'firebase/firestore';  // Firestore functions
 
 const Index = () => {
   const { data: session } = useSession();
@@ -23,9 +24,10 @@ const Index = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        setUser(firebaseUser);
+        setUser(firebaseUser); // Set the authenticated user to state
+        console.log(user);
       } else {
-        setUser(null);
+        setUser(null); // Clear user state if not authenticated
       }
     });
     return () => unsubscribe();
@@ -43,11 +45,32 @@ const Index = () => {
     }
   };
 
-  const handlePlanClick = () => {
-    if (user) {
-      router.push("/Component/Planner");
-      setIsMobileMenuOpen(false);
+  const db = getFirestore(); // Firestore instance
+
+  // Plan Click handler: Check subscription status before navigating
+  const handlePlanClick = async () => {
+    if (user && user.email) {  // Check if user is authenticated and email is not null
+      // Fetch user data from Firestore to check the 'subscribed' field
+      const userDocRef = doc(db, 'users', user.email); // Assuming the user document is identified by email
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const subscriptionCount = userData?.planGenerationCount || 0;  // Default to 0 if 'subscribed' field is missing
+
+        if (subscriptionCount <= 3 ||user.email === 'prasantshukla89@gmail.com') {
+          // If subscription count is less than 3, allow user to go to the plan page
+          router.push("/Component/Planner");
+          setIsMobileMenuOpen(false);
+        } else {
+          // Otherwise, show a warning that the free trial is over
+          setShowModal(true); // Show the modal for expired subscription
+        }
+      } else {
+        console.error("User document does not exist");
+      }
     } else {
+      // If user is not logged in, show modal to log in
       setShowModal(true);
       setIsMobileMenuOpen(false);
     }
@@ -58,12 +81,10 @@ const Index = () => {
       <header className="flex justify-between items-center p-6 bg-white text-black">
         {/* Logo */}
         <Link href='/'>
-        <div className="flex items-center gap-2">
-        
+          <div className="flex items-center gap-2">
             <GiFeatheredWing className='text-cyan-700 text-2xl' />
             <h3 className='font-mono text-cyan-700 text-2xl'>Wanderer</h3>
-         
-        </div>
+          </div>
         </Link>
 
         {/* Desktop Navigation */}
@@ -183,20 +204,18 @@ const Index = () => {
         </nav>
       )}
 
-      {/* Modal */}
+      {/* Modal for Expired Subscription */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-md">
-            <h2 className="text-lg font-semibold text-gray-800">Login Required</h2>
-            <p className="text-gray-600 mt-2">You need to log in to access the Plan feature.</p>
+            <h2 className="text-lg font-semibold text-gray-800">Subscription Expired</h2>
+            <p className="text-gray-600 mt-2">Your free trial is over. Please subscribe to continue using the service.</p>
             <div className="mt-4 flex justify-end">
-              <Link href="/Component/Login">
-                <button className="flex items-center px-4 py-2 bg-cyan-700 text-white rounded-md hover:bg-cyan-700 transition" onClick={() => setShowModal(false)}>
-                  Login <IoIosArrowForward className="ml-2" />
-                </button>
-              </Link>
+            <button className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition" onClick={() => router.push("/Component/Subscribe")}>
+                Subscribe
+              </button>
               <button className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition" onClick={() => setShowModal(false)}>
-                Cancel
+                Close
               </button>
             </div>
           </div>

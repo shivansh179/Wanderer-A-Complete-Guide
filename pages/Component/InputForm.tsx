@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ThreeDots } from 'react-loader-spinner';
 
@@ -22,6 +22,15 @@ interface InputFormProps {
     loading: boolean;
     planFetcher: () => Promise<void>;
     imageLoading: boolean;
+    setTripForFamily: (value: boolean) => void;
+    familyElderlyCount: string;
+    setFamilyElderlyCount: (value: string) => void;
+    familyLadiesCount: string;
+    setFamilyLadiesCount: (value: string) => void;
+    familyChildrenCount: string;
+    setFamilyChildrenCount: (value: string) => void;
+    familyPreferences: string;
+    setFamilyPreferences: (value: string) => void;
 }
 
 const InputForm: React.FC<InputFormProps> = ({
@@ -43,8 +52,19 @@ const InputForm: React.FC<InputFormProps> = ({
     childrenCount,
     loading,
     planFetcher,
-    imageLoading
+    imageLoading,
+    setTripForFamily,
+    familyElderlyCount,
+    setFamilyElderlyCount,
+    familyLadiesCount,
+    setFamilyLadiesCount,
+    familyChildrenCount,
+    setFamilyChildrenCount,
+    familyPreferences,
+    setFamilyPreferences
 }) => {
+    const [tripForFamily, setTripForFamilyLocal] = useState(false); // Track if the trip is for family
+
     return (
         <motion.div
             className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 hover:shadow-2xl transition-shadow duration-300"
@@ -60,8 +80,39 @@ const InputForm: React.FC<InputFormProps> = ({
                 </p>
             </div>
 
+            {/* Radio buttons to select if the trip is for self or family */}
+            <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Are you planning this trip for:</label>
+                <div className="flex items-center">
+                    <input
+                        type="radio"
+                        id="forMyself"
+                        name="tripType"
+                        checked={!tripForFamily}
+                        onChange={() => {
+                            setTripForFamilyLocal(false);
+                            setTripForFamily(false); // Pass to parent component
+                        }}
+                        className="mr-2"
+                    />
+                    <label htmlFor="forMyself" className="text-gray-700">Myself</label>
+                    <input
+                        type="radio"
+                        id="forFamily"
+                        name="tripType"
+                        checked={tripForFamily}
+                        onChange={() => {
+                            setTripForFamilyLocal(true);
+                            setTripForFamily(true); // Pass to parent component
+                        }}
+                        className="mr-2 ml-4"
+                    />
+                    <label htmlFor="forFamily" className="text-gray-700">My Family</label>
+                </div>
+            </div>
+
             <div className="space-y-4">
-                {/* Hero Section Look for Starting Point and Destination */}
+                {/* Starting Point and Destination */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Starting Point</label>
@@ -85,15 +136,11 @@ const InputForm: React.FC<InputFormProps> = ({
                     </div>
                 </div>
 
-                {/* Rest of the Inputs */}
+                {/* Trip Details */}
                 {[
                     { label: "Trip Duration (Days)", state: days, setState: setDays, type: "number" },
                     { label: "Total Budget", state: budget, setState: setBudget, type: "number" },
-                    { label: "Total Travelers", state: peopleCount, setState: setPeopleCount, type: "number" },
-                    { label: "Female Travelers", state: ladiesCount, setState: setLadiesCount, type: "number" },
-                    { label: "Senior Travelers", state: elderlyCount, setState: setElderlyCount, type: "number" },
-                    { label: "Children", state: childrenCount, setState: setChildrenCount, type: "number" }
-                ].map(({ label, state, setState, type = "text" }, index) => (
+                 ].map(({ label, state, setState, type = "text" }, index) => (
                     <div key={index}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
                         <input
@@ -106,6 +153,52 @@ const InputForm: React.FC<InputFormProps> = ({
                     </div>
                 ))}
 
+                {/* Family Details if trip is for family */}
+                {tripForFamily && (
+                    <>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Elderly Travelers</label>
+                            <input
+                                type="number"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                value={familyElderlyCount}
+                                onChange={(e) => setFamilyElderlyCount(e.target.value)}
+                                placeholder="Number of elderly travelers"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Female Travelers</label>
+                            <input
+                                type="number"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                value={familyLadiesCount}
+                                onChange={(e) => setFamilyLadiesCount(e.target.value)}
+                                placeholder="Number of female travelers"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
+                            <input
+                                type="number"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                value={familyChildrenCount}
+                                onChange={(e) => setFamilyChildrenCount(e.target.value)}
+                                placeholder="Number of children"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Family Preferences</label>
+                            <textarea
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                value={familyPreferences}
+                                onChange={(e) => setFamilyPreferences(e.target.value)}
+                                placeholder="What does your family like to do?"
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* Submit Button */}
                 <motion.button
                     className="w-full bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white font-semibold py-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50"
                     onClick={planFetcher}
