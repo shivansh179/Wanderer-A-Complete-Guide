@@ -93,7 +93,7 @@ const AboutLocation: React.FC<AboutLocationProps> = ({ locationImage, destinatio
                 </a>
 
                 {/* Optional external link */}
-                {locationBio.includes('http') && (  // Simple URL Detection
+                {locationBio && locationBio.includes('http') && (  // Ensure locationBio exists before using includes
                   <a
                     href={locationBio.match(/(https?:\/\/[^\s]+)/)?.[0] || "#"}
                     target="_blank"

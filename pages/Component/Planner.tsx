@@ -54,6 +54,11 @@ const Index = () => {
          if(destination != location){
                 fetchAboutLocation(destination);
             }
+
+
+            // fetchWeatherForDestination(destination);
+
+        
         
 
         try {
@@ -252,7 +257,31 @@ const Index = () => {
             setImageLoading(false);
         }
     };
+    
+    const fetchWeatherForDestination = async (location : string) => {
+        setLoadingNews(true);
+        setError(null);
 
+        try {
+            const response = await axios.post('/api/weather', { location: location });
+        
+            // Check if the API returns an error
+            if (response.status === 500) {
+              alert("Reminder: Try providing the complete name of the location for a better experience.");
+            }
+        
+            if (response.status === 200) {
+                console.log(response);
+             } else {
+              setError('Failed to fetch weather data.');
+              console.error('Error fetching weather:', response.status, response.data);
+             }
+        
+          } catch (error) {
+            setError('Failed to fetch weather.');
+            console.error('Error fetching weather:', error);
+           }
+    }
 
     const fetchNewsForDestination = async (location: string) => {
         setLoadingNews(true);
@@ -264,17 +293,11 @@ const Index = () => {
                     alert("It is just a reminder !!! Try providing the complete name of destination for better experience");
                 }
                 if (response.status === 200) {
-                    console.log("news reponse is ", response);
-                    
+                     
                     setNews(response.data);
-                    console.log("the news are ", response.data);
-                    // Extract image and bio from the end of the array
-                    const lastItem = response.data[response.data.length - 2];
-                    const secondLastItem = response.data[response.data.length - 1];
-    
-                    if (lastItem && lastItem.image) {
-                        setLocationImage(lastItem.image.url);
-                    }
+                     // Extract image and bio from the end of the array
+      
+                  
     
                      
                  } else {
