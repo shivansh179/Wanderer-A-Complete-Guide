@@ -66,7 +66,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
     return (
         <div className="space-y-6">
             {/* Navigation Bar for Desktop */}
-            <div className="lg:flex bg-white rounded-3xl hidden shadow-md p-4 space-x-4 items-center">
+            <div className="flex bg-white rounded-3xl  shadow-md p-4 space-x-2 items-center">
                 {['plan', 'about', 'photos', 'news'].map((section) => (
                     <div key={section} className="relative">
                         <motion.button
@@ -141,8 +141,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
 
             {activeSection === 'about' && !loading && locationBio && (
                 <AboutLocation
-                    locationImage={locationImage}
-                    destination={destination}
+                     destination={destination}
                     locationBio={locationBio}
                     sectionVariants={sectionVariants}
                 />

@@ -368,13 +368,13 @@ const Index = () => {
 {showFeedbackDialog && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full">
-              <h3 className="text-2xl font-semibold text-gray-800">We value your feedback!</h3>
-              <p className='font-extralight mb-4'>Tell use something about your last trip from <span className='text-cyan-600'>{sourceTrip}</span> to <span className='text-cyan-600'>{destinationTrip}</span></p>
+              <h3 className="text-2xl font-semibold  text-gray-800">We value your feedback!</h3>
+              <p className=' text-black font-mono mb-4'>Tell use something about your last trip from <span className='text-cyan-600'>{sourceTrip}</span> to <span className='text-cyan-600'>{destinationTrip}</span></p>
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Please share your feedback"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
+                className="w-full px-4 py-2 text-black border border-gray-300 rounded-md mb-4"
               />
               <button
                 onClick={handleFeedbackSubmit}

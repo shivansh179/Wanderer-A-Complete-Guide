@@ -88,7 +88,7 @@ const Home = () => {
     <>  
     <Navbar/>
     
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto w-auto">
       <h1 className="text-2xl text-cyan-700 font-bold mb-4">Enter your current city :</h1>
       
       <div className="flex mb-4">
@@ -97,7 +97,7 @@ const Home = () => {
           value={city}
           onChange={(e) => setCity(e.target.value)}
           placeholder="Enter city name (e.g., lucknow, delhi, goa)"
-          className="border p-2 rounded-l w-full"
+          className="border p-2 text-black rounded-l w-full"
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
         />
         <button 
@@ -109,7 +109,7 @@ const Home = () => {
         </button>
       </div>
 
-      {loading && <p className="text-center my-8">Loading data from MakeMyTrip...</p>}
+      {loading && <p className="text-center my-8">Loading data ...</p>}
       {error && <p className="text-red-500 my-4">{error}</p>}
 
       {response && response.total_items > 0 && (
@@ -121,13 +121,13 @@ const Home = () => {
           </div>
 
           {/* Category Tabs */}
-          <div className="mb-6 border-b">
+          <div className="mb-6">
             <nav className="flex -mb-px">
               {['places', 'food', 'experiences', 'museums'].map((category) => (
                 <button
                   key={category}
                   onClick={() => hasCategoryItems(category) && setActiveTab(category)}
-                  className={`mr-2 py-2 px-4 text-center ${
+                  className={`mr-2 py-2 px-3 text-center ${
                     activeTab === category 
                       ? 'border-b-2 border-blue-500 text-blue-600 font-medium' 
                       : 'text-gray-500 hover:text-gray-700'
@@ -141,7 +141,7 @@ const Home = () => {
           </div>
 
           {/* Items Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-3 gap-6">
             {activeItems.map((place, index) => (
               <div key={index} className="border rounded-lg overflow-hidden shadow-lg">
                 {place.imageUrl && (

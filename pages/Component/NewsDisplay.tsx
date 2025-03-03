@@ -1,17 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { IoIosArrowDown } from "react-icons/io";
+import { CiImageOn } from "react-icons/ci";
+
+interface NewsItem {
+    title: string;
+    description: string;
+    imageUrl: string;
+    link: string;
+}
 
 interface NewsDisplayProps {
-    news: any[]; // Replace `any` with your NewsItem interface
-    destination: string;
+    news: NewsItem[];
+    destination?: string;
     sectionVariants: any;
 }
 
-const NewsDisplay: React.FC<NewsDisplayProps> = ({ news = [], destination, sectionVariants }) => { // Provide a default value
+const NewsDisplay: React.FC<NewsDisplayProps> = ({ news = [], destination = "your area", sectionVariants }) => {
     return (
         <motion.div
-            className="bg-white rounded-3xl shadow-md p-6  h-108 overflow-auto"
+            className="bg-white rounded-3xl shadow-md p-6 h-auto overflow-auto"
             variants={sectionVariants}
             initial="hidden"
             animate="visible"
@@ -21,27 +28,45 @@ const NewsDisplay: React.FC<NewsDisplayProps> = ({ news = [], destination, secti
                 What's Happening in {destination}
             </h2>
             <ul className="space-y-4">
-                {news.map((item, index) => (
-                    <li key={index} className="flex items-start space-x-3">
-                        <div className='flex gap-2'>
-                        <img src={item.image} alt="" className='rounded-lg h-48'/>
-                       
-                        <div>
-                            <a
-                                href={item.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-bold text-cyan-600 hover:underline text-lg"
-                            >
-                                {item.title}
-                            </a>
-                            <p className="text-gray-600 text-base leading-relaxed">
-                                {item.description}
-                            </p>
-                        </div>
-                         </div>
-                    </li>
-                ))}
+                {news.map((item, index) => {
+                    const [imageError, setImageError] = useState(false);
+                    const imageUrl = item.imageUrl.startsWith('//th')
+                        ? `https:${item.imageUrl}`
+                        : `https://www.bing.com${item.imageUrl}`;
+
+                    return (
+                        <li key={index} className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
+                            <div className="flex gap-2 sm:w-1/3 justify-center">
+                                {!imageError ? (
+                                    <img
+                                        src={imageUrl}
+                                        alt="News"
+                                        className="rounded-lg w-full sm:w-48 h-48 object-cover"
+                                        loading="lazy"
+                                        onError={() => setImageError(true)}
+                                    />
+                                ) : (
+                                    <div className="border-2 rounded-lg border-gray-600 p-24">
+                                        <CiImageOn className="text-gray-400 text-6xl" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="sm:w-2/3">
+                                <a
+                                    href={item.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-bold text-cyan-600 hover:underline text-lg sm:text-xl"
+                                >
+                                    {item.title}
+                                </a>
+                                <p className="text-gray-600 text-base leading-relaxed mt-2 sm:text-lg">
+                                    {item.description}
+                                </p>
+                            </div>
+                        </li>
+                    );
+                })}
             </ul>
         </motion.div>
     );

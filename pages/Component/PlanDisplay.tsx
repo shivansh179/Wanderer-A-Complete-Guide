@@ -99,7 +99,7 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
             {loading && <p className="text-gray-500 mt-8">Loading feedbacks...</p>}
             {error && <p className="text-red-500 mt-8">{error}</p>}
             {!loading && feedbacks.length === 0 && (
-                <p className="text-gray-600 mt-8">
+                <p className="text-gray-600 border-2 border-cyan-900 p-2 rounded-lg mt-8">
                     No feedbacks available for {destination} yet. Be the first to share your experience!
                 </p>
             )}
