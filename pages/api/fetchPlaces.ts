@@ -1,6 +1,13 @@
-// pages/api/fetchPlaces.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+// api/index.ts - Edge runtime compatible API route
+import { Hono } from 'hono';
+import { handle } from 'hono/vercel';
 import * as cheerio from 'cheerio';
+
+export const config = {
+  runtime: 'edge',
+};
+
+const app = new Hono().basePath('/api');
 
 interface Place {
   name: string;
@@ -9,7 +16,7 @@ interface Place {
   description: string;
   time: string;
   link: string;
-  category: string; // Added category field to track the source
+  category: string;
 }
 
 interface CategoryData {
@@ -31,8 +38,10 @@ interface ApiResponse {
 
 const fetchCategoryData = async (cityName: string, category: string, urlPattern: string): Promise<Place[]> => {
   try {
-    const formattedCity = cityName.toLowerCase();
+    const formattedCity = cityName.toLowerCase().replace(/\s+/g, '-');
     const url = urlPattern.replace('{city}', formattedCity);
+    
+    console.log(`Fetching ${category} data from: ${url}`);
     
     const response = await fetch(url, {
       headers: {
@@ -52,10 +61,8 @@ const fetchCategoryData = async (cityName: string, category: string, urlPattern:
     
     const places: Place[] = [];
     
-    // Process all place cards on the page
     $('[class*="MostLovedPlaceCard__Container"]').each((_, element) => {
       try {
-        // Use the DOM structure to extract data
         const imgElement = $(element).find('[class*="MostLovedPlaceCard__ImgCont"] img');
         const imageUrl = imgElement.attr('src') || '';
         
@@ -70,7 +77,6 @@ const fetchCategoryData = async (cityName: string, category: string, urlPattern:
           `https://www.makemytrip.com${linkElement.attr('href')}` : 
           '';
         
-        // Only add if we have at least a name
         if (name) {
           places.push({
             name,
@@ -84,10 +90,10 @@ const fetchCategoryData = async (cityName: string, category: string, urlPattern:
         }
       } catch (err) {
         console.error(`Error processing a ${category} card:`, err);
-        // Continue with the next element even if one fails
       }
     });
     
+    console.log(`Found ${places.length} ${category} for ${cityName}`);
     return places;
   } catch (error) {
     console.error(`Error fetching ${category} data:`, error);
@@ -95,44 +101,34 @@ const fetchCategoryData = async (cityName: string, category: string, urlPattern:
   }
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { city } = req.query;
-
+app.get('/fetchPlaces', async (c) => {
+  const city = c.req.query('city');
+  
   if (!city) {
-    return res.status(400).json({ error: 'City name is required' });
+    return c.json({ error: 'City name is required' }, 400);
   }
 
-  const cityName = city as string;
+  const cityName = city.toString();
+  console.log(`Processing request for city: ${cityName}`);
 
   try {
-    console.log(`Fetching city guide data for: ${cityName}`);
-    
-    // Define the URL patterns for different categories
     const urlPatterns = {
       places: 'https://www.makemytrip.com/tripideas/places-to-visit-in-{city}',
       food: 'https://www.makemytrip.com/tripideas/foodie-hotspots-{city}',
       experiences: 'https://www.makemytrip.com/tripideas/memorable-experiences-{city}',
       museums: 'https://www.makemytrip.com/tripideas/museums-{city}'
     };
-    
-    // Fetch data for all categories in parallel
-    const results = await Promise.allSettled([
+
+    // Use Promise.all instead of Promise.allSettled for better error handling in edge functions
+    const [places, food, experiences, museums] = await Promise.all([
       fetchCategoryData(cityName, 'places', urlPatterns.places),
       fetchCategoryData(cityName, 'food', urlPatterns.food),
       fetchCategoryData(cityName, 'experiences', urlPatterns.experiences),
       fetchCategoryData(cityName, 'museums', urlPatterns.museums)
     ]);
-    
-    // Process results
-    const places = results[0].status === 'fulfilled' ? results[0].value : [];
-    const food = results[1].status === 'fulfilled' ? results[1].value : [];
-    const experiences = results[2].status === 'fulfilled' ? results[2].value : [];
-    const museums = results[3].status === 'fulfilled' ? results[3].value : [];
-    
-    // Calculate total items
+
     const totalItems = places.length + food.length + experiences.length + museums.length;
-    
-    // Create API response
+
     const apiResponse: ApiResponse = {
       city: cityName,
       total_items: totalItems,
@@ -156,22 +152,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       status: totalItems > 0 ? 'success' : 'no_data'
     };
-    
-    console.log(`Found ${totalItems} total items for ${cityName}`);
-    console.log(`Places: ${places.length}, Food: ${food.length}, Experiences: ${experiences.length}, Museums: ${museums.length}`);
-    
-    // Log an example item from each category for debugging
-    if (places.length > 0) console.log('Places example:', places[0].name);
-    if (food.length > 0) console.log('Food example:', food[0].name);
-    if (experiences.length > 0) console.log('Experiences example:', experiences[0].name);
-    if (museums.length > 0) console.log('Museums example:', museums[0].name);
-    
-    res.status(200).json(apiResponse);
+
+    return c.json(apiResponse);
   } catch (error) {
     console.error('API handler error:', error);
-    res.status(500).json({ 
+    return c.json({
       error: 'Failed to fetch data',
       details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
-}
+});
+
+export default handle(app);
