@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/pages/Component/Navbar';
 import { auth, onAuthStateChanged } from '@/FirebaseCofig'; // Import Firebase Auth
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'; // Import Firestore methods
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore'; // Import Firestore methods
 import { User } from 'firebase/auth';
+import Link from 'next/link';
+import { BiSolidOffer } from "react-icons/bi";
+
+
+
+type Trip = {
+  id: string;
+  feedbackSubmitted: boolean;
+  userEmail: string;
+  // Add other properties that exist in your trip documents
+};
+
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -12,33 +24,89 @@ const Index = () => {
   const [religion, setReligion] = useState('');
   const [favoritePlaces, setFavoritePlaces] = useState('');
   const [believerOfGod, setBelieverOfGod] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [trips, setTrips] = useState<Trip[]>([]);;
+  const [feedback, setFeedback] = useState('');
+  const [tripIdForFeedback, setTripIdForFeedback] = useState(null);
+  const [sourceTrip, setSourceTrip] = useState('');
+  const [destinationTrip, setDestinationTrip] = useState('');
+  const [showToast, setShowToast] = useState(true);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-
-        const db = getFirestore(); // Get Firestore instance
+  
+        const db = getFirestore();
         const userDocRef = doc(db, 'users', user.email || 'default-email');
         const docSnapshot = await getDoc(userDocRef);
-
+  
+        // Check if the user exists in Firestore
         if (!docSnapshot.exists()) {
-          // User is new, show the dialog to ask for more details
-          setIsNewUser(true);
           setShowReligionDialog(true);
-        } else {
-          // User has entries in Firestore
-          setIsNewUser(false);
+        }
+  
+        // Check for trips with pending feedback
+        const tripsRef = collection(db, 'trip');
+        console.log("tripRef ", tripsRef);
+  
+        // Correct the query by using 'email' instead of 'userEmail'
+        const q = query(tripsRef, where('email', '==', user.email), where('feedbackSubmitted', '==', false));
+        console.log("q ", q);
+  
+        const querySnapshot = await getDocs(q);
+        console.log("querySnapshot ", querySnapshot);
+  
+        const tripsArray: any[] = [];
+        querySnapshot.forEach((doc) => {
+          tripsArray.push({ ...doc.data(), id: doc.id });
+        });
+  
+        console.log("tripsArray is ", tripsArray);
+  
+        setTrips(tripsArray);
+  
+        if (tripsArray.length > 0) {
+          const mostRecentTrip = tripsArray[0]; // Assuming you want the most recent trip for feedback
+          setSourceTrip(mostRecentTrip.startLocation);
+          setDestinationTrip(mostRecentTrip.destination);      
+          setTripIdForFeedback(mostRecentTrip.id);
+          setShowFeedbackDialog(true);
         }
       } else {
         // User is not logged in
         setUser(null);
       }
     });
-
+  
     return () => unsubscribe();
   }, []);
+  
 
+  const handleFeedbackSubmit = async () => {
+    if (tripIdForFeedback && feedback.trim()) {
+      const db = getFirestore();
+      
+      // Update the trip document to mark feedback as submitted
+      const tripRef = doc(db, 'trip', tripIdForFeedback);
+      await updateDoc(tripRef, { feedbackSubmitted: true });
+      
+      // Use user's email as the document ID in the 'feedbacks' collection
+      const feedbackRef = doc(db, 'feedbacks', user?.email || 'default-email'); // 'feedbacks' collection, document ID is email
+      await setDoc(feedbackRef, {
+        email: user?.email,  // Storing user's email
+        source:sourceTrip,
+        destination:destinationTrip,
+        feedback: feedback,  // Storing user's feedback
+        createdAt: new Date() // Optional: store the submission time
+      });
+  
+      // Reset and close the dialog after successful submission
+      setShowFeedbackDialog(false);
+      setFeedback('');
+    }
+  };
   const handleSubmit = async () => {
     if (name.trim() && religion.trim() && favoritePlaces.trim()) {
       if (user && user.email) {
@@ -57,9 +125,84 @@ const Index = () => {
     }
   };
 
+  const handleToastClose = () => {
+    // Start the toast closing animation and hide it after it completes
+    setShowToast(false);
+  };
+
   return (
     <>
       <Navbar />
+
+      {showToast && (
+       <div id="toast-interactive" className="w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-sm dark:bg-gray-800 dark:text-gray-400 toast-animation" role="alert">
+    <div className="flex">
+    <div className="inline-flex items-center justify-center shrink-0 w-8 h-8 text-blue-500 bg-blue-100 rounded-lg dark:text-blue-300 dark:bg-blue-900">
+    <svg className="w-6 h-6 flex items-center justify-center" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10 .5a9.5 9.5 0 0 0-9.5 9.5c0 4.45 3.26 8.14 7.6 9.21a1 1 0 0 0 .62.15.69.69 0 0 0 .58-.15C12.44 18.14 15.7 14.45 15.7 10a9.5 9.5 0 0 0-9.5-9.5ZM8.6 12.63a.93.93 0 0 1-.83-.73.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.29c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7Zm1.4-4.3a.93.93 0 0 1-.83-.73.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7Zm0 0ZM8.6 12.63a.93.93 0 0 1-.83-.73.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7Zm0 0Z"/>
+    </svg>
+    <span className="sr-only">Refresh icon</span>
+</div>
+        <div className="ms-3 text-sm font-normal">
+            <span className="mb-1 text-sm font-semibold text-gray-900 dark:text-white">Explore best | It's Free</span>
+            <div className="mb-2 text-sm font-normal">You can checkout the best visiting places near your city.</div>
+            <div className="grid grid-cols-2 gap-2">
+                <div>
+                    <Link href="/BestPlaces">
+                        <div className="inline-flex justify-center w-full px-2 py-1.5 text-xs font-medium text-center text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">Let's Go</div>
+                    </Link>
+                </div>
+                <div onClick={() => setShowToast(false)}>
+                    <div className="inline-flex justify-center w-full px-2 py-1.5 text-xs font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-600 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">Not now</div>
+                </div>
+            </div>
+        </div>
+    
+              <button type="button" className="ms-auto -mx-1.5 -my-1.5 bg-white items-center justify-center shrink-0 text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700" onClick={handleToastClose} aria-label="Close">
+                  <span className="sr-only">Close</span>
+                  <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                  </svg>
+              </button>
+          </div>
+        </div>
+      )}
+
+      {/* Your other code here */}
+
+      {/* CSS for the animation */}
+      <style jsx>{`
+        .toast-animation {
+          position: fixed;
+          top: -50px;
+          left: 50%;
+          transform: translateX(-50%);
+          animation: slideDown 1s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+          0% {
+            top: -50px;
+          }
+          100% {
+            top: 20px;
+          }
+        }
+
+        .toast-animation.toast-close {
+          animation: slideUp 0.5s ease-in forwards;
+        }
+
+        @keyframes slideUp {
+          0% {
+            top: 20px;
+          }
+          100% {
+            top: -50px;
+          }
+        }
+      `}</style>
+
       <div>
         {/* Hero Section */}
         <div className="flex flex-col md:flex-row justify-center items-center px-4 py-10">
@@ -220,7 +363,36 @@ const Index = () => {
             </div>
           </div>
         )}
+
+
+{showFeedbackDialog && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full">
+              <h3 className="text-2xl font-semibold text-gray-800">We value your feedback!</h3>
+              <p className='font-extralight mb-4'>Tell use something about your last trip from <span className='text-cyan-600'>{sourceTrip}</span> to <span className='text-cyan-600'>{destinationTrip}</span></p>
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Please share your feedback"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
+              />
+              <button
+                onClick={handleFeedbackSubmit}
+                className="px-6 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition mt-4"
+              >
+                Submit Feedback
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
+
+
+
+
+
+
     </>
   );
 };

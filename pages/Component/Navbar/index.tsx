@@ -16,6 +16,7 @@ const Index = () => {
   const { data: session } = useSession();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false); // Login modal state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
  
@@ -58,8 +59,10 @@ const Index = () => {
         const userData = userDoc.data();
         const subscriptionCount = userData?.planGenerationCount || 0;  // Default to 0 if 'subscribed' field is missing
 
-        if (subscriptionCount <= 3 ||user.email === 'prasantshukla89@gmail.com') {
+ 
+        if (subscriptionCount <= 3 || user.email === 'prasantshukla89@gmail.com') {
           // If subscription count is less than 3, allow user to go to the plan page
+          
           router.push("/Component/Planner");
           setIsMobileMenuOpen(false);
         } else {
@@ -70,8 +73,8 @@ const Index = () => {
         console.error("User document does not exist");
       }
     } else {
-      // If user is not logged in, show modal to log in
-      setShowModal(true);
+      // If user is not logged in, show login required modal
+      setShowLoginModal(true);
       setIsMobileMenuOpen(false);
     }
   };
@@ -211,12 +214,34 @@ const Index = () => {
             <h2 className="text-lg font-semibold text-gray-800">Subscription Expired</h2>
             <p className="text-gray-600 mt-2">Your free trial is over. Please subscribe to continue using the service.</p>
             <div className="mt-4 flex justify-end">
-            <button className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition" onClick={() => router.push("/Component/Subscribe")}>
-                Subscribe
-              </button>
-              <button className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition" onClick={() => setShowModal(false)}>
+              <button onClick={() => setShowModal(false)} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-md mr-2">
                 Close
               </button>
+              <Link href="/subscribe">
+                <button className="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-md">
+                  Subscribe
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Login Required */}
+      {showLoginModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-md">
+            <h2 className="text-lg font-semibold text-gray-800">Login Required</h2>
+            <p className="text-gray-600 mt-2">You need to log in to access this feature. Please log in to continue.</p>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setShowLoginModal(false)} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-md mr-2">
+                Close
+              </button>
+              <Link href="/Component/Login">
+                <button className="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-md">
+                  Login
+                </button>
+              </Link>
             </div>
           </div>
         </div>

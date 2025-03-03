@@ -120,7 +120,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
             )}
 
             {activeSection === 'plan' && plan && (
-                <PlanDisplay plan={plan} sectionVariants={sectionVariants} />
+                <PlanDisplay plan={plan} sectionVariants={sectionVariants} destination={destination}/>
             )}
 
             {activeSection === 'photos' && (

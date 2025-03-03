@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const pythonScriptPath = path.join(process.cwd(), 'scripts', 'news_scraper.py');
 
       // Specify the path to the Python interpreter (use absolute path or "python" if in PATH)
-      const pythonInterpreter = process.env.NEXT_PUBLIC_PYTHON_PATH || "/usr/local/bin/python3"; // Use env var for flexibility
+      const pythonInterpreter = "/usr/local/bin/python3"; // Use env var for flexibility
 
       // Spawn a child process to execute the Python script
       const pythonProcess = spawn(pythonInterpreter, [pythonScriptPath, location]);
