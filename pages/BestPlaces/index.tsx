@@ -46,7 +46,7 @@ const Home = () => {
       const response = await fetch(`/api/fetchPlaces?city=${encodeURIComponent(city)}`);
       
       const data = await response.json();
-      console.log("API Response:", data);
+      // console.log("API Response:", data);
 
       if (response.ok) {
         setResponse(data);
@@ -89,7 +89,7 @@ const Home = () => {
   return (
     <>  
     <Navbar/>
-      <div className="pt-16  mx-auto dark:bg-gray-800 w-auto"> {/* Add pt-16 or adjust as needed */}
+      <div className="pt-32  mx-auto dark:bg-gray-800 w-auto"> {/* Add pt-16 or adjust as needed */}
         <h1 className="text-2xl text-cyan-700 font-bold mb-4">Enter your current city :</h1>
         
         <div className="flex mb-4">

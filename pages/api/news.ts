@@ -23,7 +23,7 @@ async function scrapeNews(location: string) {
     
     // Try each source until we get results
     for (const url of newsUrls) {
-      console.log(`Scraping news from: ${url}`);
+      // console.log(`Scraping news from: ${url}`);
       
       const response = await fetch(url, {
         headers: {
@@ -345,7 +345,7 @@ app.post('/news', async (c) => {
       return c.json({ error: 'Location is required' }, 400);
     }
     
-    console.log(`Processing news request for location: ${location}`);
+    // console.log(`Processing news request for location: ${location}`);
     const newsData = await scrapeNews(location);
     
     return c.json(newsData);

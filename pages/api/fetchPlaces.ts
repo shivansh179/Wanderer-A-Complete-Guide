@@ -41,7 +41,7 @@ const fetchCategoryData = async (cityName: string, category: string, urlPattern:
     const formattedCity = cityName.toLowerCase().replace(/\s+/g, '-');
     const url = urlPattern.replace('{city}', formattedCity);
     
-    console.log(`Fetching ${category} data from: ${url}`);
+    // console.log(`Fetching ${category} data from: ${url}`);
     
     const response = await fetch(url, {
       headers: {
@@ -93,7 +93,7 @@ const fetchCategoryData = async (cityName: string, category: string, urlPattern:
       }
     });
     
-    console.log(`Found ${places.length} ${category} for ${cityName}`);
+    // console.log(`Found ${places.length} ${category} for ${cityName}`);
     return places;
   } catch (error) {
     console.error(`Error fetching ${category} data:`, error);
@@ -109,7 +109,7 @@ app.get('/fetchPlaces', async (c) => {
   }
 
   const cityName = city.toString();
-  console.log(`Processing request for city: ${cityName}`);
+  // console.log(`Processing request for city: ${cityName}`);
 
   try {
     const urlPatterns = {

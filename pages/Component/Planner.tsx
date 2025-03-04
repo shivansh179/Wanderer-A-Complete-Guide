@@ -87,13 +87,13 @@
                 await updateDoc(userDocRef, {
                 planGenerationCount: currentCount + 1,  // Increment the count
                 });
-                console.log('Plan count updated successfully');
+                // console.log('Plan count updated successfully');
             } else {
                 // If the user doesn't have the field, initialize it
                 await updateDoc(userDocRef, {
                 planGenerationCount: 1,  // Initialize the count if the document exists but the count is missing
                 });
-                console.log('Initialized plan count');
+                // console.log('Initialized plan count');
             }
             } catch (error) {
             console.error('Error updating plan generation count:', error);
@@ -153,7 +153,7 @@
               }
           
               const userDetails = userDoc.data();
-              console.log(userDetails);
+              // console.log(userDetails);
           
               // Extract necessary fields from user details
               const { name, religion, favoritePlaces, believerOfGod, age, planGenerationCount = 0 } = userDetails;
@@ -262,7 +262,7 @@
               const tripRef = doc(collection(db, "trip"), user.email);
               await setDoc(tripRef, tripData, { merge: true });
           
-              console.log("Trip data saved successfully!");
+              // console.log("Trip data saved successfully!");
           
             } catch (err: any) {
               console.error('Error fetching the plan:', err);
@@ -353,11 +353,11 @@
                     });
                 }
 
-                console.log("imageResponse: ", imageResponse);
-                console.log("API Response:", imageResponse.data); // Inspect the entire response
-                console.log("Photos Length:", imageResponse.data.photos?.length);
-                console.log("Next Page URL:", imageResponse.data.next_page);
-                console.log("Total Results:", imageResponse.data.total_results);
+                // console.log("imageResponse: ", imageResponse);
+                // console.log("API Response:", imageResponse.data); // Inspect the entire response
+                // console.log("Photos Length:", imageResponse.data.photos?.length);
+                // console.log("Next Page URL:", imageResponse.data.next_page);
+                // console.log("Total Results:", imageResponse.data.total_results);
 
                 if (imageResponse.data.photos && imageResponse.data.photos.length > 0) {
                     setImages((prevImages) => [...prevImages, ...imageResponse.data.photos]);
@@ -369,7 +369,7 @@
                 setNextPageUrl(imageResponse.data.next_page || ''); // Set or clear next page URL from API response
                 setTotalResults(imageResponse.data.total_results || 0);
                 setHasMore(!!imageResponse.data.next_page); // Update based on existence of next_page URL
-                console.log("Has More: ", hasMore);
+                // console.log("Has More: ", hasMore);
 
             } catch (err: any) {
                 console.error('Error fetching images:', err);
@@ -394,7 +394,7 @@
                     }
                 );
 
-                console.log("videoResponse: ", videoResponse);
+                // console.log("videoResponse: ", videoResponse);
                 setVideos(videoResponse.data.videos || []);
                 setVideoPlaying(null); // Reset video playing state when loading new videos
                 // Pause all videos when loading new videos
@@ -423,7 +423,7 @@
                 alert("Reminder: Try providing the complete name of the location for a better experience.");
                 }
 
-                console.log(response);
+                // console.log(response);
                 
             
                 if (response.status === 200) {
@@ -480,13 +480,13 @@
 
         // Load more images
         const loadMore = useCallback(() => {
-            console.log("Load More Clicked");  // Check if the function is called
-            console.log("imageLoading:", imageLoading, "hasMore:", hasMore, "nextPageUrl:", nextPageUrl); // Check the values
+            // console.log("Load More Clicked");  // Check if the function is called
+            // console.log("imageLoading:", imageLoading, "hasMore:", hasMore, "nextPageUrl:", nextPageUrl); // Check the values
 
             if (!imageLoading && hasMore && nextPageUrl) {
                 imageFetcher(imageFetchDestination);
             } else {
-            console.log("Load More condition not met.");
+            // console.log("Load More condition not met.");
             }
         }, [imageLoading, hasMore, nextPageUrl, imageFetchDestination]);
 
@@ -494,7 +494,7 @@
         useEffect(() => {
             // Fetch images/videos only if destination has changed or when the component initially loads after plan generation.
             if (activeSection === 'photos' && planGenerated) {
-                console.log("destination: ", destination, "lastDestination: ", lastDestination, "imageFetchDestination: ", imageFetchDestination);
+                // console.log("destination: ", destination, "lastDestination: ", lastDestination, "imageFetchDestination: ", imageFetchDestination);
                 if (activeMediaType === 'photos') {
                     setImages([]); // Clear existing images
                     setNextPageUrl(''); // Reset pagination

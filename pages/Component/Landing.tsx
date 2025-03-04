@@ -51,21 +51,21 @@ const Index = () => {
   
         // Check for trips with pending feedback
         const tripsRef = collection(db, 'trip');
-        console.log("tripRef ", tripsRef);
+        // console.log("tripRef ", tripsRef);
   
         // Correct the query by using 'email' instead of 'userEmail'
         const q = query(tripsRef, where('email', '==', user.email), where('feedbackSubmitted', '==', false));
-        console.log("q ", q);
+        // console.log("q ", q);
   
         const querySnapshot = await getDocs(q);
-        console.log("querySnapshot ", querySnapshot);
+        // console.log("querySnapshot ", querySnapshot);
   
         const tripsArray: any[] = [];
         querySnapshot.forEach((doc) => {
           tripsArray.push({ ...doc.data(), id: doc.id });
         });
   
-        console.log("tripsArray is ", tripsArray);
+        // console.log("tripsArray is ", tripsArray);
   
         setTrips(tripsArray);
   

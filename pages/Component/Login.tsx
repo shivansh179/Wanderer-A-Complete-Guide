@@ -32,10 +32,10 @@ const Login = () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         // User is signed in, see details
-        console.log('User logged in:', user.email);
+        // console.log('User logged in:', user.email);
       } else {
         // User is signed out
-        console.log('No user is logged in');
+        // console.log('No user is logged in');
       }
     });
   

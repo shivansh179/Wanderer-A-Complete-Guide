@@ -22,7 +22,7 @@ async function scrapeWeather(location: string) {
     
     // Try each source until we get results
     for (const url of weatherUrls) {
-      console.log(`Scraping weather from: ${url}`);
+      // console.log(`Scraping weather from: ${url}`);
       
       const response = await fetch(url, {
         headers: {
@@ -36,7 +36,7 @@ async function scrapeWeather(location: string) {
         console.warn(`HTTP error! Status: ${response.status}`);
         continue;
       }
-      console.log("weather news is " ,response);
+      // console.log("weather news is " ,response);
       
       const html = await response.text();
       const $ = cheerio.load(html);
@@ -70,7 +70,7 @@ async function scrapeWeather(location: string) {
         
         if (locationLink) {
           const fullLink = `https://www.accuweather.com${locationLink}`;
-          console.log(`Following AccuWeather location link: ${fullLink}`);
+          // console.log(`Following AccuWeather location link: ${fullLink}`);
           
           const detailResponse = await fetch(fullLink, {
             headers: {
@@ -83,15 +83,15 @@ async function scrapeWeather(location: string) {
             const $detail = cheerio.load(detailHtml);
             
 
-            console.log("html is ", $detail);
+            // console.log("html is ", $detail);
             
             const currentTemp = $detail('.temp').first().text().trim();
 
-            console.log("current temp is  ", currentTemp);
+            // console.log("current temp is  ", currentTemp);
 
             const condition = $detail('.body-item').first().text().trim();
 
-            console.log("current condition is  ", condition);
+            // console.log("current condition is  ", condition);
 
             
             if (currentTemp) {
@@ -133,7 +133,7 @@ app.post('/weather', async (c) => {
       return c.json({ error: 'Location is required' }, 400);
     }
     
-    console.log(`Processing weather request for location: ${location}`);
+    // console.log(`Processing weather request for location: ${location}`);
     const weatherData = await scrapeWeather(location);
     
     return c.json(weatherData);
