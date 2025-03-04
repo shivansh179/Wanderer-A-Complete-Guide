@@ -89,104 +89,103 @@ const Home = () => {
   return (
     <>  
     <Navbar/>
-    
-    <div className="container mx-auto w-auto">
-      <h1 className="text-2xl text-cyan-700 font-bold mb-4">Enter your current city :</h1>
-      
-      <div className="flex mb-4">
-        <input
-          type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          placeholder="Enter city name (e.g., lucknow, delhi, goa)"
-          className="border p-2 text-black rounded-l w-full"
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <button 
-          onClick={handleSearch}
-          className="bg-cyan-800 hover:bg-cyan-500 text-white p-2 rounded-r"
-          disabled={loading}
-        >
-          {loading ? 'Searching...' : 'Search'}
-        </button>
-      </div>
-
-      {loading && <p className="text-center my-8">Loading data ...</p>}
-      {error && <p className="text-red-500 my-4">{error}</p>}
-
-      {response && response.total_items > 0 && (
-        <div>
-          <div className="city-info mb-4">
-            <h2 className="text-xl font-semibold">
-              {city.charAt(0).toUpperCase() + city.slice(1)} ({response.total_items} items found)
-            </h2>
-          </div>
-
-          {/* Category Tabs */}
-          <div className="mb-6">
-            <nav className="flex -mb-px">
-              {['places', 'food', 'experiences', 'museums'].map((category) => (
-                <button
-                  key={category}
-                  onClick={() => hasCategoryItems(category) && setActiveTab(category)}
-                  className={`mr-2 py-2 px-3 text-center ${
-                    activeTab === category 
-                      ? 'border-b-2 border-blue-500 text-blue-600 font-medium' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  } ${!hasCategoryItems(category) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!hasCategoryItems(category)}
-                >
-                  {category.charAt(0).toUpperCase() + category.slice(1)} ({getCategoryCount(category)})
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Items Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-3 gap-6">
-            {activeItems.map((place, index) => (
-              <div key={index} className="border rounded-lg overflow-hidden shadow-lg">
-                {place.imageUrl && (
-                  <div className="h-48 overflow-hidden">
-                    <img 
-                      src={place.imageUrl} 
-                      alt={place.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="p-4">
-                  <h2 className="text-xl font-bold mb-2">{place.name}</h2>
-                  <p className="text-gray-600 font-medium mb-2">{place.address}</p>
-                  <p className="text-sm mb-3">{place.description}</p>
-                  {place.time && (
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">Suggested time:</span> {place.time}
-                    </p>
-                  )}
-                  {place.link && (
-                    <a 
-                      href={place.link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-block text-blue-500 hover:underline"
-                    >
-                      View details
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="pt-16  mx-auto dark:bg-gray-800 w-auto"> {/* Add pt-16 or adjust as needed */}
+        <h1 className="text-2xl text-cyan-700 font-bold mb-4">Enter your current city :</h1>
+        
+        <div className="flex mb-4">
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Enter city name (e.g., lucknow, delhi, goa)"
+            className="border p-2 text-black rounded-l w-full dark:text-cyan-300"
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <button 
+            onClick={handleSearch}
+            className="bg-cyan-800 hover:bg-cyan-500 text-white p-2 rounded-r"
+            disabled={loading}
+          >
+            {loading ? 'Searching...' : 'Search'}
+          </button>
         </div>
-      )}
-      
-      {!loading && !response && !error && (
-        <p className="text-center text-gray-500 my-8">
-          Enter a city name and click Search to find places to visit, food spots, experiences, and museums.
-        </p>
-      )}
-    </div>
+
+        {loading && <p className="text-center my-8">Loading data ...</p>}
+        {error && <p className="text-red-500 my-4">{error}</p>}
+
+        {response && response.total_items > 0 && (
+          <div>
+            <div className="city-info mb-4">
+              <h2 className="text-xl font-semibold dark:text-cyan-500">
+                {city.charAt(0).toUpperCase() + city.slice(1)} ({response.total_items} items found :)
+              </h2>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="mb-6">
+              <nav className="flex -mb-px">
+                {['places', 'food', 'experiences', 'museums'].map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => hasCategoryItems(category) && setActiveTab(category)}
+                    className={`mr-2 py-2 px-3 text-center ${
+                      activeTab === category 
+                        ? 'border-b-2 border-cyan-500 text-cyan-600 font-medium' 
+                        : 'text-gray-500 hover:text-gray-700'
+                    } ${!hasCategoryItems(category) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={!hasCategoryItems(category)}
+                  >
+                    {category.charAt(0).toUpperCase() + category.slice(1)} ({getCategoryCount(category)})
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Items Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-3 gap-6">
+              {activeItems.map((place, index) => (
+                <div key={index} className="border rounded-lg overflow-hidden shadow-lg">
+                  {place.imageUrl && (
+                    <div className="h-48 overflow-hidden">
+                      <img 
+                        src={place.imageUrl} 
+                        alt={place.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <h2 className="text-xl font-bold dark:text-cyan-400 mb-2">{place.name}</h2>
+                    <p className="text-gray-600 dark:text-cyan-500 font-medium mb-2">{place.address}</p>
+                    <p className="text-sm mb-3 dark:text-white">{place.description}</p>
+                    {place.time && (
+                      <p className="text-sm text-gray-700 dark:text-cyan-500">
+                        <span className="font-medium dark:text-cyan-400">Suggested time:</span> {place.time}
+                      </p>
+                    )}
+                    {place.link && (
+                      <a 
+                        href={place.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-block text-cyan-500 hover:underline"
+                      >
+                        View details
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {!loading && !response && !error && (
+          <p className="text-center text-gray-500 my-8">
+            Enter a city name and click Search to find places to visit, food spots, experiences, and museums.
+          </p>
+        )}
+      </div>
     </>
   );
 };
