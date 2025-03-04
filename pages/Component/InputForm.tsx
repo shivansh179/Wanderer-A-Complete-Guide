@@ -67,22 +67,22 @@ const InputForm: React.FC<InputFormProps> = ({
 
     return (
         <motion.div
-            className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 hover:shadow-2xl transition-shadow duration-300"
+            className="bg-white rounded-3xl dark:bg-gray-800 shadow-xl p-6 sm:p-8 hover:shadow-2xl transition-shadow duration-300"
             whileHover={{ scale: 1.03 }}
             transition={{ duration: 0.2 }}
         >
             <div className="mb-6">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-cyan-800 mb-2 tracking-tight">
+                <h1 className="text-3xl sm:text-4xl font-extrabold dark:text-cyan-600 text-cyan-800 mb-2 tracking-tight">
                     Wanderer: Your AI Trip Planner
                 </h1>
-                <p className="text-gray-600 text-lg leading-relaxed">
+                <p className="text-gray-600 text-lg dark:text-white leading-relaxed">
                     Unlock unforgettable journeys with personalized AI-powered itineraries.
                 </p>
             </div>
 
             {/* Radio buttons to select if the trip is for self or family */}
             <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Are you planning this trip for:</label>
+                <label className="block text-sm font-medium dark:text-white text-gray-700 mb-2">Are you planning this trip for:</label>
                 <div className="flex items-center">
                     <input
                         type="radio"
@@ -93,9 +93,9 @@ const InputForm: React.FC<InputFormProps> = ({
                             setTripForFamilyLocal(false);
                             setTripForFamily(false); // Pass to parent component
                         }}
-                        className="mr-2"
+                        className=" mr-2 dark:text-white"
                     />
-                    <label htmlFor="forMyself" className="text-gray-700">Myself</label>
+                    <label htmlFor="forMyself" className="text-gray-700 dark:text-white">Myself</label>
                     <input
                         type="radio"
                         id="forFamily"
@@ -105,9 +105,9 @@ const InputForm: React.FC<InputFormProps> = ({
                             setTripForFamilyLocal(true);
                             setTripForFamily(true); // Pass to parent component
                         }}
-                        className="mr-2 ml-4"
+                        className="mr-2 ml-4 dark:text-white"
                     />
-                    <label htmlFor="forFamily" className="text-gray-700">My Family</label>
+                    <label htmlFor="forFamily" className="text-gray-700 dark:text-white">My Family</label>
                 </div>
             </div>
 
@@ -115,20 +115,20 @@ const InputForm: React.FC<InputFormProps> = ({
                 {/* Starting Point and Destination */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Starting Point</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">Starting Point</label>
                         <input
                             type="text"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                            className="w-full px-4 py-2 border dark:text-white border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                             value={startLocation}
                             onChange={(e) => setStartLocation(e.target.value)}
                             placeholder="Enter your starting location"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">Destination</label>
                         <input
                             type="text"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                            className="w-full px-4 py-2 border dark:text-white border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                             value={destination}
                             onChange={(e) => setDestination(e.target.value)}
                             placeholder="Enter your destination"
@@ -142,10 +142,10 @@ const InputForm: React.FC<InputFormProps> = ({
                     { label: "Total Budget", state: budget, setState: setBudget, type: "number" },
                  ].map(({ label, state, setState, type = "text" }, index) => (
                     <div key={index}>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">{label}</label>
                         <input
                             type={type}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                            className="w-full px-4 py-2 border dark:text-white border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                             value={state}
                             onChange={(e) => setState(e.target.value)}
                             placeholder={`Enter your ${label.toLowerCase()}`}
@@ -157,39 +157,39 @@ const InputForm: React.FC<InputFormProps> = ({
                 {tripForFamily && (
                     <>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Elderly Travelers</label>
+                            <label className="block text-sm font-medium dark:text-white text-gray-700 mb-1">Elderly Travelers</label>
                             <input
                                 type="number"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                className="w-full px-4 py-2 border dark:text-white border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                                 value={familyElderlyCount}
                                 onChange={(e) => setFamilyElderlyCount(e.target.value)}
                                 placeholder="Number of elderly travelers"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Female Travelers</label>
+                            <label className="block text-sm font-medium dark:text-white text-gray-700 mb-1">Female Travelers</label>
                             <input
                                 type="number"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                className="w-full px-4 py-2 border dark:text-white border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                                 value={familyLadiesCount}
                                 onChange={(e) => setFamilyLadiesCount(e.target.value)}
                                 placeholder="Number of female travelers"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
+                            <label className="block text-sm font-medium dark:text-white  text-gray-700 mb-1">Children</label>
                             <input
                                 type="number"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                className="w-full px-4 py-2 border dark:text-white border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                                 value={familyChildrenCount}
                                 onChange={(e) => setFamilyChildrenCount(e.target.value)}
                                 placeholder="Number of children"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Family Preferences</label>
+                            <label className="block text-sm font-medium dark:text-white text-gray-700 mb-1">Family Preferences</label>
                             <textarea
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
+                                className="w-full px-4 py-2 border dark:text-white  border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none transition-all text-gray-700"
                                 value={familyPreferences}
                                 onChange={(e) => setFamilyPreferences(e.target.value)}
                                 placeholder="What does your family like to do?"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react';
 import Navbar from '../Component/Navbar/index';
 interface Place {

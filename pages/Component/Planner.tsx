@@ -1,4 +1,4 @@
-
+"use client"
     import React, { useState, useEffect, useCallback, useRef } from 'react';
     import { onAuthStateChanged } from 'firebase/auth'; // Import onAuthStateChanged
     import Navbar from '@/pages/Component/Navbar';
@@ -540,108 +540,109 @@
         };
 
         return (
-            <AuthGuard>
-              <Navbar />
-              <motion.div
-                className="min-h-screen bg-gradient-to-br from-cyan-50 to-cyan-100 py-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className={`flex flex-wrap md:flex lg:flex gap-6 mt-10 transition-all duration-700 ease-in-out`}>
-                    {/* Left Column - Input Form */}
-                    <div
-                      className={`w-full lg:w-1/2 transition-all duration-700 ease-in-out ${plan ? 'hidden' : 'w-full'}`}
-                    >
-                      <InputForm
-                        startLocation={startLocation}
-                        setStartLocation={setStartLocation}
-                        destination={destination}
-                        setDestination={setDestination}
-                        days={days}
-                        setDays={setDays}
-                        budget={budget}
-                        setBudget={setBudget}
-                        peopleCount={peopleCount}
-                        setPeopleCount={setPeopleCount}
-                        ladiesCount={ladiesCount}
-                        setLadiesCount={setLadiesCount}
-                        elderlyCount={elderlyCount}
-                        setElderlyCount={setElderlyCount}
-                        childrenCount={childrenCount}
-                        setChildrenCount={setChildrenCount}
-                        loading={loading}
-                        planFetcher={planFetcher}
-                        imageLoading={imageLoading}
-                        setTripForFamily={setTripForFamily}
-                        familyElderlyCount={familyElderlyCount}
-                        setFamilyElderlyCount={setFamilyElderlyCount}
-                        familyLadiesCount={familyLadiesCount}
-                        setFamilyLadiesCount={setFamilyLadiesCount}
-                        familyChildrenCount={familyChildrenCount}
-                        setFamilyChildrenCount={setFamilyChildrenCount}
-                        familyPreferences={familyPreferences}
-                        setFamilyPreferences={setFamilyPreferences}
-                      />
-                    </div>
-        
-                    {/* Right Column - Results */}
-                    {plan && (
-                      <div className={`w-full transition-all duration-700 ease-in-out`}>
-                        <ResultsSection
-                          loading={loading}
-                          error={error}
-                          plan={plan}
-                          activeSection={activeSection}
-                          setActiveSection={setActiveSection}
-                          location={location}
-                          planGenerated={planGenerated}
-                          news={news}
-                          locationImage={locationImage}
-                          locationBio={locationBio}
-                          images={images}
-                          imageLoading={imageLoading}
-                          hasMore={hasMore}
-                          loadMore={loadMore}
-                          fetchNewsForDestination={fetchNewsForDestination}
-                          destination={destination}
-                          videos={videos}
-                          fetchVideos={fetchVideos}
-                          previousValue={previousValue}
-                          activeMediaType={activeMediaType}
-                          switchMediaType={switchMediaType}
-                        />
-                      </div>
-                    )}
-                  </div>
+          <AuthGuard>
+          <Navbar />
+          <motion.div
+            className="pt-16 min-h-screen dark:bg-gray-900" // ADDED pt-16  (adjust as needed)
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className={`flex flex-wrap md:flex lg:flex gap-6 mt-10 transition-all duration-700 ease-in-out`}>
+                {/* Left Column - Input Form */}
+                <div
+                  className={`w-full lg:w-1/2 transition-all duration-700 ease-in-out ${plan ? 'hidden' : 'w-full'}`}
+                >
+                  <InputForm
+                    startLocation={startLocation}
+                    setStartLocation={setStartLocation}
+                    destination={destination}
+                    setDestination={setDestination}
+                    days={days}
+                    setDays={setDays}
+                    budget={budget}
+                    setBudget={setBudget}
+                    peopleCount={peopleCount}
+                    setPeopleCount={setPeopleCount}
+                    ladiesCount={ladiesCount}
+                    setLadiesCount={setLadiesCount}
+                    elderlyCount={elderlyCount}
+                    setElderlyCount={setElderlyCount}
+                    childrenCount={childrenCount}
+                    setChildrenCount={setChildrenCount}
+                    loading={loading}
+                    planFetcher={planFetcher}
+                    imageLoading={imageLoading}
+                    setTripForFamily={setTripForFamily}
+                    familyElderlyCount={familyElderlyCount}
+                    setFamilyElderlyCount={setFamilyElderlyCount}
+                    familyLadiesCount={familyLadiesCount}
+                    setFamilyLadiesCount={setFamilyLadiesCount}
+                    familyChildrenCount={familyChildrenCount}
+                    setFamilyChildrenCount={setFamilyChildrenCount}
+                    familyPreferences={familyPreferences}
+                    setFamilyPreferences={setFamilyPreferences}
+                  />
                 </div>
-              </motion.div>
-        
-              {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                  <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-md">
-                    <h2 className="text-lg font-semibold text-gray-800">Subscription Expired</h2>
-                    <p className="text-gray-600 mt-2">Your free trial is over. Please subscribe to continue using the service.</p>
-                    <div className="mt-4 flex justify-end">
-                      <button
-                        className="ml-2 px-4 py-2 text-white bg-indigo-500 border rounded-md hover:bg-cyan-900 hover:text-black transition"
-                        onClick={() => router.push('/Component/Subscribe')}
-                      >
-                        Subscribe
-                      </button>
-                      <button
-                        className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition"
-                        onClick={() => router.push('/')}
-                      >
-                        Close
-                      </button>
-                    </div>
+  
+                {/* Right Column - Results */}
+                {plan && (
+                  <div className={`w-full transition-all duration-700 ease-in-out`}>
+                    <ResultsSection
+                      loading={loading}
+                      error={error}
+                      plan={plan}
+                      activeSection={activeSection}
+                      setActiveSection={setActiveSection}
+                      location={location}
+                      planGenerated={planGenerated}
+                      news={news}
+                      locationImage={locationImage}
+                      locationBio={locationBio}
+                      images={images}
+                      imageLoading={imageLoading}
+                      hasMore={hasMore}
+                      loadMore={loadMore}
+                      fetchNewsForDestination={fetchNewsForDestination}
+                      destination={destination}
+                      videos={videos}
+                      fetchVideos={fetchVideos}
+                      previousValue={previousValue}
+                      activeMediaType={activeMediaType}
+                      switchMediaType={switchMediaType}
+                    />
                   </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+  
+          {showModal && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-md">
+                <h2 className="text-lg font-semibold text-gray-800">Subscription Expired</h2>
+                <p className="text-gray-600 mt-2">Your free trial is over. Please subscribe to continue using the service.</p>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    className="ml-2 px-4 py-2 text-white bg-indigo-500 border rounded-md hover:bg-cyan-900 hover:text-black transition"
+                    onClick={() => router.push('/Component/Subscribe')}
+                  >
+                    Subscribe
+                  </button>
+                  <button
+                    className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition"
+                    onClick={() => router.push('/')}
+                  >
+                    Close
+                  </button>
                 </div>
-              )}
-            </AuthGuard>
+              </div>
+            </div>
+          )}
+        </AuthGuard>
+      
           );
         };
 

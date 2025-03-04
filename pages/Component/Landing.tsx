@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/pages/Component/Navbar';
 import { auth, onAuthStateChanged } from '@/FirebaseCofig'; // Import Firebase Auth
@@ -132,7 +134,9 @@ const Index = () => {
 
   return (
     <>
+    {/* <span className='fixed'> */}
       <Navbar />
+      {/* </span> */}
 
       {showToast && (
        <div id="toast-interactive" className="w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-sm dark:bg-gray-800 dark:text-gray-400 toast-animation" role="alert">
@@ -205,13 +209,13 @@ const Index = () => {
 
       <div>
         {/* Hero Section */}
-        <div className="flex flex-col md:flex-row justify-center items-center px-4 py-10">
+        <div className="flex flex-col md:flex-row justify-center items-center px-4 dark:bg-gray-800 py-10">
           <div className="md:w-1/2 gap-6 md:gap-8 text-center md:text-left md:ml-20 ">
-            <h1 className="font-bold text-4xl md:text-6xl leading-tight">
+            <h1 className="font-bold text-4xl md:text-6xl dark:text-white leading-tight">
               Let's Explore <br />
               <span className="text-cyan-600">Wonderful</span> <br /> World's Beauty
             </h1>
-            <p className="text-lg md:text-2xl text-gray-700 mt-4">
+            <p className="text-lg md:text-2xl text-gray-700 dark:text-white mt-4">
               Uncover hidden gems and create unforgettable memories. Your journey starts here. We offer curated travel experiences to inspire and delight.
             </p>
             <div className="flex justify-center md:justify-start gap-4 mt-6">
@@ -233,22 +237,22 @@ const Index = () => {
         </div>
 
         {/* Section 2: Featured Destinations */}
-        <section className="bg-gray-50 py-16">
+        <section className="bg-gray-50 dark:bg-gray-800 dark:opacity-95 py-16">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-semibold text-center mb-8 text-gray-800">
+            <h2 className="text-3xl font-semibold dark:text-white text-center mb-8 text-gray-800">
               Featured Destinations
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Destination 1 */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-white rounded-lg dark:bg-gray-900 shadow-md overflow-hidden">
                 <img
                   src="/paris.jpg"
                   alt="Destination 1"
                   className="w-full h-56 object-cover"
                 />
                 <div className="p-4">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Paris, France</h3>
-                  <p className="text-gray-700">
+                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Paris, France</h3>
+                  <p className="text-gray-700 dark:text-white">
                     Experience the romance of the Eiffel Tower and the charm of Parisian cafes.
                   </p>
                   <button className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition">
@@ -258,15 +262,15 @@ const Index = () => {
               </div>
 
               {/* Destination 2 */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-white rounded-lg dark:bg-gray-900 shadow-md overflow-hidden">
                 <img
                   src="/tokyo.jpg"
                   alt="Destination 2"
                   className="w-full h-56 object-cover"
                 />
                 <div className="p-4">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Kyoto, Japan</h3>
-                  <p className="text-gray-700">
+                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Kyoto, Japan</h3>
+                  <p className="text-gray-700 dark:text-white">
                     Discover ancient temples, serene gardens, and the beauty of Japanese culture.
                   </p>
                   <button className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition">
@@ -276,15 +280,15 @@ const Index = () => {
               </div>
 
               {/* Destination 3 */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-white rounded-lg dark:bg-gray-900 shadow-md overflow-hidden">
                 <img
                   src="/pachu.jpg"
                   alt="Destination 3"
                   className="w-full h-56 object-cover"
                 />
                 <div className="p-4">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Machu Picchu, Peru</h3>
-                  <p className="text-gray-700">
+                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Machu Picchu, Peru</h3>
+                  <p className="text-gray-700 dark:text-white">
                     Hike through breathtaking landscapes to the lost city of the Incas.
                   </p>
                   <button className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition">
@@ -374,7 +378,7 @@ const Index = () => {
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Please share your feedback"
-                className="w-full px-4 py-2 text-black border border-gray-300 rounded-md mb-4"
+                className="w-full px-4 py-2 dark:text-white text-black border border-gray-300 rounded-md mb-4"
               />
               <button
                 onClick={handleFeedbackSubmit}

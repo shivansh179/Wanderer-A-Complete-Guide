@@ -1,3 +1,5 @@
+"use client"
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useSpring, animated } from 'react-spring';
@@ -66,11 +68,11 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
     return (
         <div className="space-y-6">
             {/* Navigation Bar for Desktop */}
-            <div className="flex bg-white rounded-3xl  shadow-md p-4 space-x-2 items-center">
+            <div className="flex bg-white rounded-3xl dark:bg-gray-800 shadow-md p-4 space-x-2 items-center">
                 {['plan', 'about', 'photos', 'news'].map((section) => (
                     <div key={section} className="relative">
                         <motion.button
-                            className={`py-2 px-4 rounded-full text-base font-medium ${activeSection === section ? 'text-cyan-700' : 'text-gray-600 hover:text-cyan-500'} transition-colors duration-300 focus:outline-none`}
+                            className={`py-2 px-4 rounded-full dark:text-cyan-400 text-base font-medium ${activeSection === section ? 'text-cyan-300 font-bold' : 'text-gray-600 hover:text-cyan-500'} transition-colors duration-300 focus:outline-none`}
                             onClick={() => setActiveSection(section as 'plan' | 'about' | 'photos' | 'news')}
                             disabled={loading || (section === 'news' && !planGenerated)}
                             whileHover={{ scale: 1.1 }}

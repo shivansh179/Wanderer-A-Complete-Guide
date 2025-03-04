@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -56,14 +57,14 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
 
     return (
         <motion.div
-            className="bg-white rounded-3xl shadow-md p-6 h-120 overflow-auto"
+            className="bg-white rounded-3xl dark:bg-gray-800 shadow-md p-6 h-120 overflow-auto"
             variants={sectionVariants}
             initial="hidden"
             animate="visible"
             exit="hidden"
         >
             <div className="flex items-center mb-4">
-                <h2 className="text-2xl sm:text-3xl font-semibold text-cyan-700 mr-2">
+                <h2 className="text-2xl dark:text-cyan-400 sm:text-3xl font-semibold text-cyan-700 mr-2">
                     Your Personalized Itinerary
                 </h2>
                 {/* Icon for triggering dialog */}
@@ -80,26 +81,26 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
-                className="prose max-w-none"
+                className="prose max-w-none "
                 components={{
-                    h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-cyan-700 mb-3" {...props} />,
-                    h2: ({ node, ...props }) => <h2 className="text-xl font-semibold text-cyan-600 mt-4 mb-2" {...props} />,
-                    p: ({ node, ...props }) => <p className="text-gray-700 mb-3 leading-relaxed" {...props} />,
-                    ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
-                    ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
-                    li: ({ node, ...props }) => <li className="text-gray-600" {...props} />,
-                    strong: ({ node, ...props }) => <strong className="font-semibold text-cyan-800" {...props} />,
-                    a: ({ node, ...props }) => <a className="text-cyan-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
+                    h1: ({ node, ...props }) => <h1 className="text-2xl font-bold dark:text-cyan-400  text-cyan-700 mb-3" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="text-xl font-semibold dark:text-cyan-400  text-cyan-600 mt-4 mb-2" {...props} />,
+                    p: ({ node, ...props }) => <p className="text-gray-700 mb-3 dark:text-cyan-400  leading-relaxed" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4  dark:text-cyan-400 space-y-2" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 dark:text-cyan-400  space-y-2" {...props} />,
+                    li: ({ node, ...props }) => <li className="text-gray-600 dark:text-cyan-400 " {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-semibold dark:text-cyan-400  text-cyan-800" {...props} />,
+                    a: ({ node, ...props }) => <a className="text-cyan-600 dark:text-cyan-400  hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
                 }}
             >
                 {plan}
             </ReactMarkdown>
 
             {/* Show loading, error, or feedback messages */}
-            {loading && <p className="text-gray-500 mt-8">Loading feedbacks...</p>}
+            {loading && <p className="text-gray-500 dark:text-cyan-400  mt-8">Loading feedbacks...</p>}
             {error && <p className="text-red-500 mt-8">{error}</p>}
             {!loading && feedbacks.length === 0 && (
-                <p className="text-gray-600 border-2 border-cyan-900 p-2 rounded-lg mt-8">
+                <p className="text-gray-600 border-2 dark:text-cyan-400 dark:border-cyan-600 border-cyan-900 p-2 rounded-lg mt-8">
                     No feedbacks available for {destination} yet. Be the first to share your experience!
                 </p>
             )}
