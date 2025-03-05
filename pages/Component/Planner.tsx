@@ -1,595 +1,713 @@
 "use client"
-    import React, { useState, useEffect, useCallback, useRef } from 'react';
-    import { onAuthStateChanged } from 'firebase/auth'; // Import onAuthStateChanged
-    import Navbar from '@/pages/Component/Navbar';
-    import axios from 'axios';
-    import { auth } from '@/FirebaseCofig'; // Import the auth instance
-    import InputForm from './InputForm';
-    import ResultsSection from './ResultsSection';
-    import { Image, NewsItem, Video } from '@/types/types';
-    import { motion } from 'framer-motion';
-    import AuthGuard from '../AuthGuard/AuthGuard';
-    import { collection, getFirestore, setDoc, updateDoc } from 'firebase/firestore';
-    import { doc, getDoc } from 'firebase/firestore';
-    import router from 'next/router';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import Navbar from '@/pages/Component/Navbar';
+import axios from 'axios';
+import { auth } from '@/FirebaseCofig';
+import InputForm from './InputForm';
+import ResultsSection from './ResultsSection';
+import { Image, NewsItem, Video } from '@/types/types';
+import { motion, AnimatePresence } from 'framer-motion';
+import AuthGuard from '../AuthGuard/AuthGuard';
+import { collection, getFirestore, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
+import router from 'next/router';
+import { FaSpinner, FaLock, FaCheckCircle } from 'react-icons/fa';
 
-    const Index = () => {
-        const [user, setUser] = useState<any>(null); // State for storing the authenticated user
-        const [startLocation, setStartLocation] = useState('');
-        const [destination, setDestination] = useState('');
-        const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-        const [days, setDays] = useState('');
-        const [budget, setBudget] = useState('');
-        const [peopleCount, setPeopleCount] = useState('');
-        const [ladiesCount, setLadiesCount] = useState('');
-        const [elderlyCount, setElderlyCount] = useState('');
-        const [childrenCount, setChildrenCount] = useState('');
-        const [images, setImages] = useState<Image[]>([]);
-        const [imagePower, setImagePower] = useState(false);
-        const [loadingNews, setLoadingNews] = useState(false);
-        const [news, setNews] = useState<NewsItem[]>([]);
-        const [locationImage, setLocationImage] = useState('');
-        const [locationBio, setLocationBio] = useState('');
-        const [plan, setPlan] = useState('');
-        const [loading, setLoading] = useState(false);
-        const [error, setError] = useState<string | null>(null);
-        const [imageLoading, setImageLoading] = useState(false);
-        const [hasMore, setHasMore] = useState(true);
-        const [nextPageUrl, setNextPageUrl] = useState('');
-        const [totalResults, setTotalResults] = useState(0);
-        const [activeMediaType, setActiveMediaType] = useState<'photos' | 'videos'>('photos');
-        const [videos, setVideos] = useState<Video[]>([]);
-        const [videoPlaying, setVideoPlaying] = useState<number | null>(null); // To track which video is playing
-        const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
-        const [currentValue, setCurrentValue] = useState('');
-        const [previousValue, setPreviousValue] = useState('');
-        const [imageFetchDestination, setImageFetchDestination] = useState(''); // Separate state for image fetch
-        const [location, setLocation] = useState('');
-        const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU';
-        const PEXELS_API_KEY = '2wBg5SOXdnIFQApqDr5zTPq8MjvJGCcmXtIa3orVKwYe94fRNfZzuSwW'; // Replace with your actual API key
+const Index = () => {
+  const [user, setUser] = useState<any>(null);
+  const [startLocation, setStartLocation] = useState('');
+  const [destination, setDestination] = useState('');
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [days, setDays] = useState('');
+  const [budget, setBudget] = useState('');
+  const [peopleCount, setPeopleCount] = useState('');
+  const [ladiesCount, setLadiesCount] = useState('');
+  const [elderlyCount, setElderlyCount] = useState('');
+  const [childrenCount, setChildrenCount] = useState('');
+  const [images, setImages] = useState<Image[]>([]);
+  const [imagePower, setImagePower] = useState(false);
+  const [loadingNews, setLoadingNews] = useState(false);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [locationImage, setLocationImage] = useState('');
+  const [locationBio, setLocationBio] = useState('');
+  const [plan, setPlan] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextPageUrl, setNextPageUrl] = useState('');
+  const [totalResults, setTotalResults] = useState(0);
+  const [activeMediaType, setActiveMediaType] = useState<'photos' | 'videos'>('photos');
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [videoPlaying, setVideoPlaying] = useState<number | null>(null);
+  const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
+  const [currentValue, setCurrentValue] = useState('');
+  const [previousValue, setPreviousValue] = useState('');
+  const [imageFetchDestination, setImageFetchDestination] = useState('');
+  const [location, setLocation] = useState('');
+  const [activeSection, setActiveSection] = useState<'plan' | 'about' | 'photos' | 'news'>('plan');
+  const [planGenerated, setPlanGenerated] = useState(false);
+  const [lastDestination, setLastDestination] = useState('');
+  const [tripForFamily, setTripForFamily] = useState(false);
+  const [familyElderlyCount, setFamilyElderlyCount] = useState('');
+  const [familyLadiesCount, setFamilyLadiesCount] = useState('');
+  const [familyChildrenCount, setFamilyChildrenCount] = useState('');
+  const [familyPreferences, setFamilyPreferences] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [modalAnimating, setModalAnimating] = useState(false);
+  const [planGenerationSuccess, setPlanGenerationSuccess] = useState(false);
+  
+  const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU';
+  const PEXELS_API_KEY = '2wBg5SOXdnIFQApqDr5zTPq8MjvJGCcmXtIa3orVKwYe94fRNfZzuSwW';
 
-        const [activeSection, setActiveSection] = useState<'plan' | 'about' | 'photos' | 'news'>('plan');
-        const [planGenerated, setPlanGenerated] = useState(false);
-        const [lastDestination, setLastDestination] = useState(''); // Store the last destination for which images/videos were fetched
+  // Fetch user details from Firestore
+  const fetchUserDetailsFromFirestore = async (userEmail: string) => {
+    const db = getFirestore();
+    const userDocRef = doc(db, 'users', userEmail);
+    const docSnapshot = await getDoc(userDocRef);
 
-        const [tripForFamily, setTripForFamily] = useState(false); // Track if the trip is for family
-        const [familyElderlyCount, setFamilyElderlyCount] = useState('');
-        const [familyLadiesCount, setFamilyLadiesCount] = useState('');
-        const [familyChildrenCount, setFamilyChildrenCount] = useState('');
-        const [familyPreferences, setFamilyPreferences] = useState('');
-        const [showModal, setShowModal] = useState(false);
+    if (docSnapshot.exists()) {
+      return docSnapshot.data();
+    } else {
+      console.warn("No user data found in Firestore.");
+      return null;
+    }
+  };
+  
+  const db = getFirestore();
+
+  const incrementPlanGenerationCount = async (userEmail: string) => {
+    const userDocRef = doc(db, 'users', userEmail);
+    
+    try {
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const currentCount = userDoc.data()?.planGenerationCount || 0;
+        await updateDoc(userDocRef, {
+          planGenerationCount: currentCount + 1,
+        });
+      } else {
+        await updateDoc(userDocRef, {
+          planGenerationCount: 1,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating plan generation count:', error);
+    }
+  };
+
+  // Check user authentication and plan generation count
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
+      if (authenticatedUser && authenticatedUser.email) {
+        const userDocRef = doc(db, 'users', authenticatedUser.email);
+        const userDoc = await getDoc(userDocRef);
         
-
-        // Fetch user details from Firestore based on authenticated user email
-        const fetchUserDetailsFromFirestore = async (userEmail: string) => {
-            const db = getFirestore(); // Get Firestore instance
-            const userDocRef = doc(db, 'users', userEmail); // Assuming the document ID is user's email
-            const docSnapshot = await getDoc(userDocRef);
-        
-            if (docSnapshot.exists()) {
-            return docSnapshot.data();
-            } else {
-            console.warn("No user data found in Firestore.");
-            return null;
-            }
-        };
-        
-        const db = getFirestore();
-
-        const incrementPlanGenerationCount = async (userEmail: string) => {
-            const userDocRef = doc(db, 'users', userEmail);  // Reference to the user's document
-            
-            try {
-            const userDoc = await getDoc(userDocRef); // Get the user's document
-            
-            if (userDoc.exists()) {
-                const currentCount = userDoc.data()?.planGenerationCount || 0; // Default to 0 if not set
-                await updateDoc(userDocRef, {
-                planGenerationCount: currentCount + 1,  // Increment the count
-                });
-                // console.log('Plan count updated successfully');
-            } else {
-                // If the user doesn't have the field, initialize it
-                await updateDoc(userDocRef, {
-                planGenerationCount: 1,  // Initialize the count if the document exists but the count is missing
-                });
-                // console.log('Initialized plan count');
-            }
-            } catch (error) {
-            console.error('Error updating plan generation count:', error);
-            }
-        };
-
-        // Fetch user data once the user is authenticated
-        useEffect(() => {
-            const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
-            if (authenticatedUser && authenticatedUser.email) {
-                const userDocRef = doc(db, 'users', authenticatedUser.email);
-                const userDoc = await getDoc(userDocRef);
-                
-                let planGenerationCount = 0;  // Default count
-                if (userDoc.exists()) {
-                planGenerationCount = userDoc.data()?.planGenerationCount || 0; // Retrieve the count or default to 0
-                }
-        
-                // If the count exceeds the limit (3), show the modal
-                if (planGenerationCount <= 3 || authenticatedUser.email === 'prasantshukla89@gmail.com') {
-                setUser(authenticatedUser); // Set the authenticated user to state
-                } else {
-                setShowModal(true);  // Show subscription modal
-                setLoading(false);  // Stop loading
-                return;
-                }
-            } else {
-                setUser(null); // Clear user state if not authenticated
-            }
-            });
-            
-            return unsubscribe;
-        }, []);
-        
-
-        const planFetcher = async () => {
-            setPlan('');
-            setLoading(true);
-            setError(null);
-            setPlanGenerated(true);
-          
-            if (!user) {
-              setError('User not authenticated.');
-              setLoading(false);
-              return;
-            }
-          
-            try {
-              // Fetch user details from the Firestore 'users' collection using the email ID
-              const userDocRef = doc(db, 'users', user.email);
-              const userDoc = await getDoc(userDocRef);
-          
-              if (!userDoc.exists()) {
-                setError('Could not fetch user details. Please make sure you are logged in.');
-                setLoading(false);
-                return;
-              }
-          
-              const userDetails = userDoc.data();
-              // console.log(userDetails);
-          
-              // Extract necessary fields from user details
-              const { name, religion, favoritePlaces, believerOfGod, age, planGenerationCount = 0 } = userDetails;
-          
-              // Check plan generation limit (unless user is 'prasantshukla89@gmail.com')
-              if (planGenerationCount >= 3 && user.email !== 'prasantshukla89@gmail.com') {
-                setShowModal(true);
-                setLoading(false);
-                return;
-              }
-          
-              // Fetch about the location
-              fetchAboutLocation(destination);
-          
-              const userSpecificDetails = `
-                Name: ${name}
-                Religion: ${religion}
-                Favorite Places: ${favoritePlaces}
-                Believer of God: ${believerOfGod ? 'Yes' : 'No'}
-                Age: ${age}
-              `;
-          
-              let travelPlanPrompt = '';
-          
-              if (tripForFamily) {
-                travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for my family. 
-                They are ${peopleCount} people in total, with ${familyLadiesCount} ladies, ${familyElderlyCount} elders, and ${familyChildrenCount} children. 
-                Total budget is ${budget}. Please consider the following family preferences for travel to create a detailed itinerary: 
-                ${familyPreferences}
-                The itinerary should include family-friendly travel routes, must-visit places, activities, and an estimated budget breakdown. 
-                Additionally, if any members have special needs, include safety tips for elderly, ladies, and children.`;
-              } else {
-                travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for myself. 
-                I am traveling alone. My budget is ${budget}. Please consider the following personal details to create a detailed itinerary: 
-                ${userSpecificDetails}
-                The itinerary should include travel routes, must-visit places, activities, and an estimated budget breakdown.`;
-              }
-          
-              // Make API request to Gemini for travel plan generation
-              const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-                {
-                  contents: [
-                    {
-                      parts: [
-                        {
-                          text: travelPlanPrompt
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                  }
-                }
-              );
-          
-              const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
-              setPlan(extractedPlan);
-          
-              setImages([]);
-              setNextPageUrl('');
-              setTotalResults(0);
-              setHasMore(true);
-              setVideos([]);
-              setActiveMediaType('photos');
-              setVideoPlaying(null);
-              videoRefs.current = {};
-          
-              setImageFetchDestination(destination);
-              setActiveSection('plan');
-              setPreviousValue(destination);
-              setCurrentValue(destination);
-              setLocation(destination);
-          
-              if (destination === location) {
-                fetchNewsForDestination(location);
-              } else {
-                fetchNewsForDestination(destination);
-              }
-          
-              // Increment plan generation count in Firestore
-              incrementPlanGenerationCount(user.email);
-          
-              // Save trip data to Firestore
-              const tripData = {
-                email: user.email,
-                name,
-                startLocation,
-                destination,
-                days,
-                budget,
-                peopleCount,
-                tripForFamily,
-                familyElderlyCount,
-                familyLadiesCount,
-                familyChildrenCount,
-                familyPreferences,
-                generatedPlan: extractedPlan,
-                feedbackSubmitted,
-                createdAt: new Date().toISOString()
-              };
-          
-              const tripRef = doc(collection(db, "trip"), user.email);
-              await setDoc(tripRef, tripData, { merge: true });
-          
-              // console.log("Trip data saved successfully!");
-          
-            } catch (err: any) {
-              console.error('Error fetching the plan:', err);
-              setError(err.message || 'Failed to fetch the plan. Please try again.');
-              setPlan('');
-            } finally {
-              setLoading(false);
-            }
-          };
-          
-
-
-        const fetchAboutLocation = async (location: string) => {
-            setLoading(true);
-            setError(null);
-        
-            try {
-                const response = await axios.post(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-                    {
-                        contents: [
-                            {
-                                parts: [
-                                    {
-                                        text: `I’m planning to travel to ${location}. Could you provide a detailed guide about the place, including:
-        
-                                                1. Historical Background:
-                                                * A brief history of the city/country, including significant events, cultural shifts, and famous historical landmarks.
-                                                
-                                                2. Cultural Insights:
-                                                    * Local customs, traditions, language, and important cultural aspects that would enrich my understanding and    interaction with locals.
-                                                
-                                                3. Top Attractions:
-                                                * The best places to visit, including popular tourist destinations, hidden gems, and landmarks that reflect the city's heritage and culture.
-                                                * Details on must-see museums, historical sites, and natural wonders in and around the destination.
-                                                
-                                                4. Local Cuisine:
-                                                    * The best local foods and dishes to try, including any famous restaurants or markets known for authentic culinary experiences.
-        
-                                                5. Unique Experiences:
-                                                    * Special activities or experiences unique to the destination (festivals, art scenes, adventure sports, etc.) that should not be missed.
-                                                
-                                                6. Practical Travel Tips:
-                                                    * Local transportation options, the best time to visit (season/weather), safety tips, and any important travel regulations or recommendations for tourists.
-                                                
-                                                Please tailor the information to a first-time traveler who wants to explore both the well-known and off-the-beaten-path experiences, focusing on immersive and educational travel.`
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    }
-                );
-        
-                setLocationBio(response.data.candidates[0].content.parts[0].text);
-            } catch (err: any) {
-                console.error('Error fetching the plan:', err);
-                setError(err.message || 'Failed to fetch the plan. Please try again.');
-                setPlan('');
-            } finally {
-                setLoading(false);
-            }
-        };
-        
-
-        const imageFetcher = async (query: string) => {
-            setImageLoading(true);
-            try {
-                let imageResponse;
-
-                if (nextPageUrl) {
-                    // Use the existing nextPageUrl if it exists
-                    imageResponse = await axios.get(nextPageUrl, {
-                        headers: {
-                            'Authorization': PEXELS_API_KEY,
-                        }
-                    });
-                } else {
-                    // Use the query to build the initial URL
-                    imageResponse = await axios.get(`https://api.pexels.com/v1/search?query=${query}`, {
-                        headers: {
-                            'Authorization': PEXELS_API_KEY,
-                        }
-                    });
-                }
-
-                // console.log("imageResponse: ", imageResponse);
-                // console.log("API Response:", imageResponse.data); // Inspect the entire response
-                // console.log("Photos Length:", imageResponse.data.photos?.length);
-                // console.log("Next Page URL:", imageResponse.data.next_page);
-                // console.log("Total Results:", imageResponse.data.total_results);
-
-                if (imageResponse.data.photos && imageResponse.data.photos.length > 0) {
-                    setImages((prevImages) => [...prevImages, ...imageResponse.data.photos]);
-                } else {
-                    console.warn("No photos found in API response.");
-                    setHasMore(false); //If there no photos found then set hasMore to false so that load more button dissapear
-                }
-
-                setNextPageUrl(imageResponse.data.next_page || ''); // Set or clear next page URL from API response
-                setTotalResults(imageResponse.data.total_results || 0);
-                setHasMore(!!imageResponse.data.next_page); // Update based on existence of next_page URL
-                // console.log("Has More: ", hasMore);
-
-            } catch (err: any) {
-                console.error('Error fetching images:', err);
-                setImages([]);
-                setNextPageUrl('');
-                setTotalResults(0);
-                setHasMore(false);
-            } finally {
-                setImageLoading(false);
-            }
-        };
-
-        const fetchVideos = async () => {
-            setImageLoading(true);
-            try {
-                const videoResponse = await axios.get(
-                    `https://api.pexels.com/videos/search?query=${destination}&per_page=10`,
-                    {
-                        headers: {
-                            'Authorization': PEXELS_API_KEY,
-                        }
-                    }
-                );
-
-                // console.log("videoResponse: ", videoResponse);
-                setVideos(videoResponse.data.videos || []);
-                setVideoPlaying(null); // Reset video playing state when loading new videos
-                // Pause all videos when loading new videos
-                Object.values(videoRefs.current).forEach((videoRef) => {
-                    if (videoRef) {
-                        videoRef.pause();
-                    }
-                });
-            } catch (err: any) {
-                console.error('Error fetching videos:', err);
-                setVideos([]);
-            } finally {
-                setImageLoading(false);
-            }
-        };
-        
-        const fetchWeatherForDestination = async (location : string) => {
-            setLoadingNews(true);
-            setError(null);
-
-            try {
-                const response = await axios.post('/api/weather', { location: location });
-            
-                // Check if the API returns an error
-                if (response.status === 500) {
-                alert("Reminder: Try providing the complete name of the location for a better experience.");
-                }
-
-                // console.log(response);
-                
-            
-                if (response.status === 200) {
-                    // console.log("weather news are", response);
-                } else {
-                setError('Failed to fetch weather data.');
-                console.error('Error fetching weather:', response.status, response.data);
-                }
-            
-            } catch (error) {
-                setError('Failed to fetch weather.');
-                console.error('Error fetching weather:', error);
-            }
+        let planGenerationCount = 0;
+        if (userDoc.exists()) {
+          planGenerationCount = userDoc.data()?.planGenerationCount || 0;
         }
 
-        const fetchNewsForDestination = async (location: string) => {
-            setLoadingNews(true);
-            setError(null);
+        if (planGenerationCount <= 3 || authenticatedUser.email === 'prasantshukla89@gmail.com') {
+          setUser(authenticatedUser);
+        } else {
+          setShowModal(true);
+          setLoading(false);
+          return;
+        }
+      } else {
+        setUser(null);
+      }
+    });
+    
+    return unsubscribe;
+  }, []);
 
-            try {
-                    const response = await axios.post('/api/news', { location: location });
-                    if (response.status === 200) {
-                    setNews(response.data.articles);
-                    // console.log("the news are ", response.data.articles);
-                    // Extract image and bio from the end of the array
-                   
-
-                    fetchWeatherForDestination(destination);
-                } else {
-                    setError('Failed to fetch news.');
-                    console.error('Error fetching news:', response.status, response.data);
-                    setNews([]);
-                }
-            
-            } catch (error) {
-                setError('Failed to fetch news.');
-                console.error('Error fetching news:', error);
-                setNews([]);
-            } finally {
-                setLoadingNews(false);
-            }
-        };
-
-        // useEffect(() => {
-        //     if (planGenerated && destination) {
-        //         fetchNewsForDestination(destination);
-        //     }
-        // }, [destination, planGenerated]);
-
-        const isActive = () => {
-            setImagePower(!imagePower);
-        };
-
-
-        // Load more images
-        const loadMore = useCallback(() => {
-            // console.log("Load More Clicked");  // Check if the function is called
-            // console.log("imageLoading:", imageLoading, "hasMore:", hasMore, "nextPageUrl:", nextPageUrl); // Check the values
-
-            if (!imageLoading && hasMore && nextPageUrl) {
-                imageFetcher(imageFetchDestination);
-            } else {
-            // console.log("Load More condition not met.");
-            }
-        }, [imageLoading, hasMore, nextPageUrl, imageFetchDestination]);
-
-        // Initial image load and media type selection
-        useEffect(() => {
-            // Fetch images/videos only if destination has changed or when the component initially loads after plan generation.
-            if (activeSection === 'photos' && planGenerated) {
-                // console.log("destination: ", destination, "lastDestination: ", lastDestination, "imageFetchDestination: ", imageFetchDestination);
-                if (activeMediaType === 'photos') {
-                    setImages([]); // Clear existing images
-                    setNextPageUrl(''); // Reset pagination
-                    imageFetcher(imageFetchDestination);
-                } else if (activeMediaType === 'videos') {
-                    setVideos([]); // Clear existing videos
-                    fetchVideos();
-                }
-                setLastDestination(destination); // Update last destination
-            }
-            // If destination hasn't changed but we want to load more, call loadMore or fetchVideos directly from loadMore button
-        }, [activeSection, activeMediaType, planGenerated, imageFetchDestination]);
-
-
-        //Video PAUSE and video
-        const handleVideoToggle = (videoId: number) => {
-            setVideoPlaying((prevVideoId) => (prevVideoId === videoId ? null : videoId));
-
-            // Access the video ref
-            const videoRef = videoRefs.current[videoId];
-
-            if (videoRef) {
-                if (videoPlaying === videoId) {
-                    videoRef.pause();
-                } else {
-                    videoRef.play();
-                }
-            }
-        };
-
-        // Function to switch between photos and videos
-        const switchMediaType = (type: 'photos' | 'videos') => {
-            setActiveMediaType(type);
-            if (type === 'photos') {
-                if (images.length === 0) {
-                    imageFetcher(imageFetchDestination);
-                }
-            } else if (type === 'videos') {
-                if (videos.length === 0) {
-                    fetchVideos();
-                }
-            }
-        };
-
-        return (
-          <AuthGuard>
-          <Navbar />
-          <motion.div
-            className="pt-16 min-h-screen dark:bg-gray-900" // ADDED pt-16  (adjust as needed)
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className={`flex flex-wrap md:flex lg:flex gap-6 mt-10 transition-all duration-700 ease-in-out`}>
-                {/* Left Column - Input Form */}
-                <div
-                  className={`w-full lg:w-1/2 transition-all duration-700 ease-in-out ${plan ? 'hidden' : 'w-full'}`}
-                >
-                  <InputForm
-                    startLocation={startLocation}
-                    setStartLocation={setStartLocation}
-                    destination={destination}
-                    setDestination={setDestination}
-                    days={days}
-                    setDays={setDays}
-                    budget={budget}
-                    setBudget={setBudget}
-                    peopleCount={peopleCount}
-                    setPeopleCount={setPeopleCount}
-                    ladiesCount={ladiesCount}
-                    setLadiesCount={setLadiesCount}
-                    elderlyCount={elderlyCount}
-                    setElderlyCount={setElderlyCount}
-                    childrenCount={childrenCount}
-                    setChildrenCount={setChildrenCount}
-                    loading={loading}
-                    planFetcher={planFetcher}
-                    imageLoading={imageLoading}
-                    setTripForFamily={setTripForFamily}
-                    familyElderlyCount={familyElderlyCount}
-                    setFamilyElderlyCount={setFamilyElderlyCount}
-                    familyLadiesCount={familyLadiesCount}
-                    setFamilyLadiesCount={setFamilyLadiesCount}
-                    familyChildrenCount={familyChildrenCount}
-                    setFamilyChildrenCount={setFamilyChildrenCount}
-                    familyPreferences={familyPreferences}
-                    setFamilyPreferences={setFamilyPreferences}
-                  />
-                </div>
+  // Generate travel plan
+  const planFetcher = async () => {
+    setPlan('');
+    setLoading(true);
+    setError(null);
+    setPlanGenerationSuccess(false);
+    setPlanGenerated(true);
   
-                {/* Right Column - Results */}
-                {plan && (
-                  <div className={`w-full transition-all duration-700 ease-in-out`}>
+    if (!user) {
+      setError('User not authenticated.');
+      setLoading(false);
+      return;
+    }
+  
+    try {
+      // Fetch user details
+      const userDocRef = doc(db, 'users', user.email);
+      const userDoc = await getDoc(userDocRef);
+  
+      if (!userDoc.exists()) {
+        setError('Could not fetch user details. Please make sure you are logged in.');
+        setLoading(false);
+        return;
+      }
+  
+      const userDetails = userDoc.data();
+      const { name, religion, favoritePlaces, believerOfGod, age, planGenerationCount = 0 } = userDetails;
+  
+      // Check plan generation limit
+      if (planGenerationCount >= 3 && user.email !== 'prasantshukla89@gmail.com') {
+        setShowModal(true);
+        setLoading(false);
+        return;
+      }
+  
+      // Fetch about the location
+      fetchAboutLocation(destination);
+  
+      const userSpecificDetails = `
+        Name: ${name}
+        Religion: ${religion}
+        Favorite Places: ${favoritePlaces}
+        Believer of God: ${believerOfGod ? 'Yes' : 'No'}
+        Age: ${age}
+      `;
+  
+      let travelPlanPrompt = '';
+  
+      if (tripForFamily) {
+        travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for my family. 
+        They are ${peopleCount} people in total, with ${familyLadiesCount} ladies, ${familyElderlyCount} elders, and ${familyChildrenCount} children. 
+        Total budget is ${budget}. Please consider the following family preferences for travel to create a detailed itinerary: 
+        ${familyPreferences}
+        The itinerary should include family-friendly travel routes, must-visit places, activities, and an estimated budget breakdown. 
+        Additionally, if any members have special needs, include safety tips for elderly, ladies, and children.`;
+      } else {
+        travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for myself. 
+        I am traveling alone. My budget is ${budget}. Please consider the following personal details to create a detailed itinerary: 
+        ${userSpecificDetails}
+        The itinerary should include travel routes, must-visit places, activities, and an estimated budget breakdown.`;
+      }
+  
+      // Make API request to Gemini
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          contents: [
+            {
+              parts: [
+                {
+                  text: travelPlanPrompt
+                }
+              ]
+            }
+          ]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+  
+      const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
+      setPlan(extractedPlan);
+      setPlanGenerationSuccess(true);
+  
+      // Reset media states
+      setImages([]);
+      setNextPageUrl('');
+      setTotalResults(0);
+      setHasMore(true);
+      setVideos([]);
+      setActiveMediaType('photos');
+      setVideoPlaying(null);
+      videoRefs.current = {};
+  
+      // Update state values
+      setImageFetchDestination(destination);
+      setActiveSection('plan');
+      setPreviousValue(destination);
+      setCurrentValue(destination);
+      setLocation(destination);
+  
+      // Fetch news
+      if (destination === location) {
+        fetchNewsForDestination(location);
+      } else {
+        fetchNewsForDestination(destination);
+      }
+  
+      // Increment plan generation count
+      incrementPlanGenerationCount(user.email);
+  
+      // Save trip data to Firestore
+      const tripData = {
+        email: user.email,
+        name,
+        startLocation,
+        destination,
+        days,
+        budget,
+        peopleCount,
+        tripForFamily,
+        familyElderlyCount,
+        familyLadiesCount,
+        familyChildrenCount,
+        familyPreferences,
+        generatedPlan: extractedPlan,
+        feedbackSubmitted,
+        createdAt: new Date().toISOString()
+      };
+  
+      const tripRef = doc(collection(db, "trip"), user.email);
+      await setDoc(tripRef, tripData, { merge: true });
+  
+    } catch (err: any) {
+      console.error('Error fetching the plan:', err);
+      setError(err.message || 'Failed to fetch the plan. Please try again.');
+      setPlan('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch destination information
+  const fetchAboutLocation = async (location: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          contents: [
+            {
+              parts: [
+                {
+                  text: `I'm planning to travel to ${location}. Could you provide a detailed guide about the place, including:
+
+                          1. Historical Background:
+                          * A brief history of the city/country, including significant events, cultural shifts, and famous historical landmarks.
+                          
+                          2. Cultural Insights:
+                          * Local customs, traditions, language, and important cultural aspects that would enrich my understanding and interaction with locals.
+                          
+                          3. Top Attractions:
+                          * The best places to visit, including popular tourist destinations, hidden gems, and landmarks that reflect the city's heritage and culture.
+                          * Details on must-see museums, historical sites, and natural wonders in and around the destination.
+                          
+                          4. Local Cuisine:
+                          * The best local foods and dishes to try, including any famous restaurants or markets known for authentic culinary experiences.
+
+                          5. Unique Experiences:
+                          * Special activities or experiences unique to the destination (festivals, art scenes, adventure sports, etc.) that should not be missed.
+                          
+                          6. Practical Travel Tips:
+                          * Local transportation options, the best time to visit (season/weather), safety tips, and any important travel regulations or recommendations for tourists.
+                          
+                          Please tailor the information to a first-time traveler who wants to explore both the well-known and off-the-beaten-path experiences, focusing on immersive and educational travel.`
+                }
+              ]
+            }
+          ]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      setLocationBio(response.data.candidates[0].content.parts[0].text);
+    } catch (err: any) {
+      console.error('Error fetching location information:', err);
+      setError(err.message || 'Failed to fetch location information. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch images
+  const imageFetcher = async (query: string) => {
+    setImageLoading(true);
+    try {
+      let imageResponse;
+
+      if (nextPageUrl) {
+        imageResponse = await axios.get(nextPageUrl, {
+          headers: {
+            'Authorization': PEXELS_API_KEY,
+          }
+        });
+      } else {
+        imageResponse = await axios.get(`https://api.pexels.com/v1/search?query=${query}`, {
+          headers: {
+            'Authorization': PEXELS_API_KEY,
+          }
+        });
+      }
+
+      if (imageResponse.data.photos && imageResponse.data.photos.length > 0) {
+        setImages((prevImages) => [...prevImages, ...imageResponse.data.photos]);
+      } else {
+        console.warn("No photos found in API response.");
+        setHasMore(false);
+      }
+
+      setNextPageUrl(imageResponse.data.next_page || '');
+      setTotalResults(imageResponse.data.total_results || 0);
+      setHasMore(!!imageResponse.data.next_page);
+
+    } catch (err: any) {
+      console.error('Error fetching images:', err);
+      setImages([]);
+      setNextPageUrl('');
+      setTotalResults(0);
+      setHasMore(false);
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  // Fetch videos
+  const fetchVideos = async () => {
+    setImageLoading(true);
+    try {
+      const videoResponse = await axios.get(
+        `https://api.pexels.com/videos/search?query=${destination}&per_page=10`,
+        {
+          headers: {
+            'Authorization': PEXELS_API_KEY,
+          }
+        }
+      );
+
+      setVideos(videoResponse.data.videos || []);
+      setVideoPlaying(null);
+      
+      // Pause all videos
+      Object.values(videoRefs.current).forEach((videoRef) => {
+        if (videoRef) {
+          videoRef.pause();
+        }
+      });
+    } catch (err: any) {
+      console.error('Error fetching videos:', err);
+      setVideos([]);
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  // Fetch weather
+  const fetchWeatherForDestination = async (location: string) => {
+    setLoadingNews(true);
+    setError(null);
+
+    try {
+      const response = await axios.post('/api/weather', { location: location });
+    
+      if (response.status === 500) {
+        alert("Reminder: Try providing the complete name of the location for a better experience.");
+      }
+
+    } catch (error) {
+      setError('Failed to fetch weather.');
+      console.error('Error fetching weather:', error);
+    }
+  }
+
+  // Fetch news
+  const fetchNewsForDestination = async (location: string) => {
+    setLoadingNews(true);
+    setError(null);
+
+    try {
+      const response = await axios.post('/api/news', { location: location });
+      if (response.status === 200) {
+        setNews(response.data.articles);
+        fetchWeatherForDestination(destination);
+      } else {
+        setError('Failed to fetch news.');
+        console.error('Error fetching news:', response.status, response.data);
+        setNews([]);
+      }
+    
+    } catch (error) {
+      setError('Failed to fetch news.');
+      console.error('Error fetching news:', error);
+      setNews([]);
+    } finally {
+      setLoadingNews(false);
+    }
+  };
+
+  const isActive = () => {
+    setImagePower(!imagePower);
+  };
+
+  // Load more images
+  const loadMore = useCallback(() => {
+    if (!imageLoading && hasMore && nextPageUrl) {
+      imageFetcher(imageFetchDestination);
+    }
+  }, [imageLoading, hasMore, nextPageUrl, imageFetchDestination]);
+
+  // Initial image load and media type selection
+  useEffect(() => {
+    if (activeSection === 'photos' && planGenerated) {
+      if (activeMediaType === 'photos') {
+        setImages([]);
+        setNextPageUrl('');
+        imageFetcher(imageFetchDestination);
+      } else if (activeMediaType === 'videos') {
+        setVideos([]);
+        fetchVideos();
+      }
+      setLastDestination(destination);
+    }
+  }, [activeSection, activeMediaType, planGenerated, imageFetchDestination]);
+
+  // Video toggle
+  const handleVideoToggle = (videoId: number) => {
+    setVideoPlaying((prevVideoId) => (prevVideoId === videoId ? null : videoId));
+
+    const videoRef = videoRefs.current[videoId];
+
+    if (videoRef) {
+      if (videoPlaying === videoId) {
+        videoRef.pause();
+      } else {
+        videoRef.play();
+      }
+    }
+  };
+
+  // Switch media type
+  const switchMediaType = (type: 'photos' | 'videos') => {
+    setActiveMediaType(type);
+    if (type === 'photos') {
+      if (images.length === 0) {
+        imageFetcher(imageFetchDestination);
+      }
+    } else if (type === 'videos') {
+      if (videos.length === 0) {
+        fetchVideos();
+      }
+    }
+  };
+
+  // Animation variants
+  const pageTransition = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut"
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      y: -20,
+      transition: {
+        duration: 0.4
+      }
+    }
+  };
+
+  // Close subscription modal and redirect
+  const handleSubscribe = () => {
+    setModalAnimating(true);
+    setTimeout(() => {
+      router.push('/Component/Subscribe');
+    }, 300);
+  };
+
+  // Close subscription modal and go home
+  const handleClose = () => {
+    setModalAnimating(true);
+    setTimeout(() => {
+      router.push('/');
+    }, 300);
+  };
+
+  return (
+    <AuthGuard>
+      <Navbar />
+      <div className="bg-gray-50 text-gray-900 dark:text-white  bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-700 min-h-screen">
+        <div className="pt-24 pb-16">
+          <motion.div
+            className="container mx-auto px-4 sm:px-6 lg:px-8"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={pageTransition}
+          >
+            {!plan && (
+              <div className="text-center mb-10">
+                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
+                  Plan Your Perfect Journey
+                </h1>
+                <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                  Let us create a personalized travel itinerary tailored just for you. Simply fill in your travel details below.
+                </p>
+              </div>
+            )}
+
+            <div className={`flex flex-wrap gap-6 transition-all duration-700 ease-in-out`}>
+              {/* Input Form */}
+              <AnimatePresence mode="wait">
+                {!plan && (
+                  <motion.div
+                    className="w-full lg:w-2/3 mx-auto"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
+                        <h2 className="text-2xl font-bold text-white">Travel Details</h2>
+                        <p className="text-blue-100">Tell us about your upcoming adventure</p>
+                      </div>
+                      
+                      <div className="p-6">
+                        <InputForm
+                          startLocation={startLocation}
+                          setStartLocation={setStartLocation}
+                          destination={destination}
+                          setDestination={setDestination}
+                          days={days}
+                          setDays={setDays}
+                          budget={budget}
+                          setBudget={setBudget}
+                          peopleCount={peopleCount}
+                          setPeopleCount={setPeopleCount}
+                          ladiesCount={ladiesCount}
+                          setLadiesCount={setLadiesCount}
+                          elderlyCount={elderlyCount}
+                          setElderlyCount={setElderlyCount}
+                          childrenCount={childrenCount}
+                          setChildrenCount={setChildrenCount}
+                          loading={loading}
+                          planFetcher={planFetcher}
+                          imageLoading={imageLoading}
+                          setTripForFamily={setTripForFamily}
+                          familyElderlyCount={familyElderlyCount}
+                          setFamilyElderlyCount={setFamilyElderlyCount}
+                          familyLadiesCount={familyLadiesCount}
+                          setFamilyLadiesCount={setFamilyLadiesCount}
+                          familyChildrenCount={familyChildrenCount}
+                          setFamilyChildrenCount={setFamilyChildrenCount}
+                          familyPreferences={familyPreferences}
+                          setFamilyPreferences={setFamilyPreferences}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Loading State */}
+              <AnimatePresence>
+                {loading && (
+                  <motion.div 
+                    className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <motion.div 
+                      className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                    >
+                      <div className="text-center">
+                        <div className="flex justify-center mb-4">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                          >
+                            <FaSpinner className="text-4xl text-blue-600 dark:text-blue-400" />
+                          </motion.div>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                          Creating Your Perfect Itinerary
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300">
+                          We're designing a personalized travel plan for your journey to {destination}. This may take a moment...
+                        </p>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Success Animation */}
+              <AnimatePresence>
+                {planGenerationSuccess && !loading && (
+                  <motion.div 
+                    className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onAnimationComplete={() => {
+                      setTimeout(() => {
+                        setPlanGenerationSuccess(false);
+                      }, 1500);
+                    }}
+                  >
+                    <motion.div 
+                      className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md shadow-2xl flex items-center justify-center"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 1.1, opacity: 0 }}
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 10, delay: 0.2 }}
+                      >
+                        <FaCheckCircle className="text-6xl text-green-500" />
+                      </motion.div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Results Section */}
+              {plan && (
+                <motion.div 
+                  className="w-full"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h2 className="text-2xl font-bold text-white">
+                            Your {days}-Day Trip to {destination}
+                          </h2>
+                          <p className="text-blue-100">
+                            From {startLocation} • Budget: {budget}
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setPlan('');
+                            setPlanGenerated(false);
+                          }}
+                          className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition"
+                        >
+                          New Plan
+                        </button>
+                      </div>
+                    </div>
+                    
                     <ResultsSection
                       loading={loading}
                       error={error}
@@ -614,36 +732,93 @@
                       switchMediaType={switchMediaType}
                     />
                   </div>
-                )}
-              </div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
-  
-          {showModal && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-md">
-                <h2 className="text-lg font-semibold text-gray-800">Subscription Expired</h2>
-                <p className="text-gray-600 mt-2">Your free trial is over. Please subscribe to continue using the service.</p>
-                <div className="mt-4 flex justify-end">
+        </div>
+      </div>
+
+      {/* Subscription Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div 
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-2xl max-w-md w-full mx-4"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                <div className="flex items-center gap-3">
+                  <FaLock className="text-2xl" />
+                  <h2 className="text-xl font-bold">Premium Feature</h2>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-gray-700 dark:text-gray-300 mb-4">
+                  You've reached the limit of your free trial. Unlock unlimited travel planning by subscribing to our premium plan.
+                </p>
+                
+                <div className="bg-blue-50 dark:bg-gray-700 p-4 rounded-lg mb-6">
+                  <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Premium Benefits:</h3>
+                  <ul className="text-gray-700 dark:text-gray-300 space-y-1">
+                    <li className="flex items-center gap-2">
+                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                      <span>Unlimited travel plans</span>
+                    </li><li className="flex items-center gap-2">
+                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                      <span>Unlimited travel plans</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                      <span>Access to premium destinations</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                      <span>Advanced itinerary customization</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                      <span>Offline access to your plans</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                <div className="flex justify-end gap-4">
                   <button
-                    className="ml-2 px-4 py-2 text-white bg-indigo-500 border rounded-md hover:bg-cyan-900 hover:text-black transition"
-                    onClick={() => router.push('/Component/Subscribe')}
+                    onClick={handleClose}
+                    className={`px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg transition ${
+                      modalAnimating ? 'opacity-50 pointer-events-none' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    disabled={modalAnimating}
                   >
-                    Subscribe
+                    Maybe Later
                   </button>
                   <button
-                    className="ml-2 px-4 py-2 text-gray-600 border rounded-md hover:bg-gray-100 transition"
-                    onClick={() => router.push('/')}
+                    onClick={handleSubscribe}
+                    className={`px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-md transition ${
+                      modalAnimating ? 'opacity-50 pointer-events-none' : 'hover:from-blue-700 hover:to-indigo-700'
+                    }`}
+                    disabled={modalAnimating}
                   >
-                    Close
+                    Subscribe Now
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-        </AuthGuard>
-      
-          );
-        };
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AuthGuard>
+  );
+};
 
-    export default Index;
+export default Index;

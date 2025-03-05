@@ -2,23 +2,29 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/pages/Component/Navbar';
-import { auth, onAuthStateChanged } from '@/FirebaseCofig'; // Import Firebase Auth
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore'; // Import Firestore methods
+import { auth, onAuthStateChanged } from '@/FirebaseCofig';
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, Timestamp } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import Link from 'next/link';
-import { BiSolidOffer } from "react-icons/bi";
-
-
+import { BiSolidOffer, BiSearchAlt } from "react-icons/bi";
+import { FaMapMarkerAlt, FaRegCalendarAlt, FaUserFriends, FaChevronRight, FaChevronLeft, FaCheckCircle } from "react-icons/fa";
+import { RiCompassDiscoverLine } from "react-icons/ri";
+import { MdOutlineExplore, MdTravelExplore } from "react-icons/md";
+import { IoClose } from "react-icons/io5";
+import toast from 'react-hot-toast';
 
 type Trip = {
   id: string;
   feedbackSubmitted: boolean;
-  userEmail: string;
+  completed: boolean; // Add completed property
+  email: string;
+  startLocation: string;
+  destination: string;
+  createdAt: Timestamp | string;
   // Add other properties that exist in your trip documents
 };
 
-
-const Index = () => {
+const Landing = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
   const [showReligionDialog, setShowReligionDialog] = useState(false);
@@ -27,15 +33,139 @@ const Index = () => {
   const [favoritePlaces, setFavoritePlaces] = useState('');
   const [believerOfGod, setBelieverOfGod] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
-  const [trips, setTrips] = useState<Trip[]>([]);;
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [completedTrips, setCompletedTrips] = useState<Trip[]>([]);
   const [feedback, setFeedback] = useState('');
-  const [tripIdForFeedback, setTripIdForFeedback] = useState(null);
+  const [tripIdForFeedback, setTripIdForFeedback] = useState<string | null>(null);
   const [sourceTrip, setSourceTrip] = useState('');
   const [destinationTrip, setDestinationTrip] = useState('');
   const [showToast, setShowToast] = useState(true);
+  const [toastClosing, setToastClosing] = useState(false);
+  const [currentDestinationIndex, setCurrentDestinationIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
+  // Popular destinations data
+  const popularDestinations = [
+    { 
+      id: 1, 
+      name: "Paris, France", 
+      image: "/paris.jpg", 
+      description: "Experience the romance of the Eiffel Tower and the charm of Parisian cafes.",
+      rating: 4.8,
+      price: "$1,200",
+      duration: "5 days"
+    },
+    { 
+      id: 2, 
+      name: "Kyoto, Japan", 
+      image: "/tokyo.jpg", 
+      description: "Discover ancient temples, serene gardens, and the beauty of Japanese culture.",
+      rating: 4.7,
+      price: "$1,800",
+      duration: "7 days"
+    },
+    { 
+      id: 3, 
+      name: "Machu Picchu, Peru", 
+      image: "/pachu.jpg", 
+      description: "Hike through breathtaking landscapes to the lost city of the Incas.",
+      rating: 4.9,
+      price: "$1,500",
+      duration: "6 days"
+    },
+    { 
+      id: 4, 
+      name: "Santorini, Greece", 
+      image: "/images/travel/island-getaway.jpg", 
+      description: "Experience stunning sunsets over the Aegean Sea from whitewashed villages.",
+      rating: 4.9,
+      price: "$1,600",
+      duration: "6 days"
+    },
+    { 
+      id: 5, 
+      name: "Bali, Indonesia", 
+      image: "/images/travel/tropical-paradise.jpg", 
+      description: "Discover lush rice terraces, spiritual temples, and beautiful beaches.",
+      rating: 4.6,
+      price: "$1,100",
+      duration: "8 days"
+    }
+  ];
 
+  // Featured experiences
+  const featuredExperiences = [
+    {
+      id: 1,
+      title: "Northern Lights Adventure",
+      location: "Iceland",
+      image: "https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn:ANd9GcSHVofjIB3S4P5qBPzmiAYYHlmZe0_ubtdtrKAdGFPqinZ4onvTd4gZYdDX3yishPbOgQkdqKqQV57dTCI91tBg14qI7eQcKC5CG38HAQ",
+      price: "$2,100",
+      rating: 4.9
+    },
+    {
+      id: 2,
+      title: "Desert Safari Adventure",
+      location: "Dubai, UAE",
+      image: "https://plus.unsplash.com/premium_photo-1661962428918-6a57ab674e23?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8ZGVzZXJ0JTIwc2FmYXJpfGVufDB8fDB8fHww",
+      price: "$890",
+      rating: 4.7
+    },
+    {
+      id: 3,
+      title: "Rainforest Exploration",
+      location: "Costa Rica",
+      image: "https://media.istockphoto.com/id/1056872134/photo/mountain-bike-costa-rica.webp?a=1&b=1&s=612x612&w=0&k=20&c=ZB9cveVHfQtgicFQyo0HF40LSDdlUvtF3AHFj0Mg-ng=",
+      price: "$1,350",
+      rating: 4.8
+    }
+  ];
+
+  // Testimonials data
+  const testimonials = [
+    {
+      id: 1,
+      name: "Sarah Johnson",
+      location: "New York, USA",
+      comment: "The trip to Kyoto exceeded all my expectations! The guides were knowledgeable and the accommodations were perfect.",
+      avatar: "https://img.freepik.com/free-vector/user-circles-set_78370-4704.jpg?ga=GA1.1.495762774.1737877477&semt=ais_hybrid"
+    },
+    {
+      id: 2,
+      name: "Michael Wong",
+      location: "Sydney, Australia",
+      comment: "Our family vacation to Bali was seamlessly organized. Every detail was taken care of, allowing us to fully enjoy our time.",
+      avatar: "https://img.freepik.com/free-vector/user-circles-set_78370-4704.jpg?ga=GA1.1.495762774.1737877477&semt=ais_hybrid"
+    },
+    {
+      id: 3,
+      name: "Elena Rodriguez",
+      location: "Madrid, Spain",
+      comment: "The Paris tour was magical! From the Eiffel Tower to the local cuisine, everything was perfectly arranged.",
+      avatar: "https://img.freepik.com/free-vector/user-circles-set_78370-4704.jpg?ga=GA1.1.495762774.1737877477&semt=ais_hybrid"
+    }
+  ];
+
+  // Trending destinations - display 3 at a time
+  const trendingDestinations = popularDestinations.slice(currentDestinationIndex, currentDestinationIndex + 3);
+
+  const nextDestination = () => {
+    setCurrentDestinationIndex((prevIndex) => 
+      (prevIndex + 1) % (popularDestinations.length - 2)
+    );
+  };
+
+  const prevDestination = () => {
+    setCurrentDestinationIndex((prevIndex) => 
+      prevIndex === 0 ? popularDestinations.length - 3 : prevIndex - 1
+    );
+  };
+
+  // Fetch user data, check if new user, and get completed trips that need feedback
   useEffect(() => {
+    setIsLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
@@ -49,28 +179,43 @@ const Index = () => {
           setShowReligionDialog(true);
         }
   
-        // Check for trips with pending feedback
+        // Get all trips by this user
         const tripsRef = collection(db, 'trip');
-        // console.log("tripRef ", tripsRef);
-  
-        // Correct the query by using 'email' instead of 'userEmail'
-        const q = query(tripsRef, where('email', '==', user.email), where('feedbackSubmitted', '==', false));
-        // console.log("q ", q);
-  
+        const q = query(tripsRef, where('email', '==', user.email));
         const querySnapshot = await getDocs(q);
-        // console.log("querySnapshot ", querySnapshot);
   
-        const tripsArray: any[] = [];
+        const allTrips: Trip[] = [];
+        const completedTripsWithoutFeedback: Trip[] = [];
+        
         querySnapshot.forEach((doc) => {
-          tripsArray.push({ ...doc.data(), id: doc.id });
+          const tripData = { ...doc.data(), id: doc.id } as Trip;
+          allTrips.push(tripData);
+          
+          // Filter for completed trips that need feedback
+          if (tripData.completed === true && tripData.feedbackSubmitted === false) {
+            completedTripsWithoutFeedback.push(tripData);
+          }
         });
   
-        // console.log("tripsArray is ", tripsArray);
+        setTrips(allTrips);
+        setCompletedTrips(completedTripsWithoutFeedback);
   
-        setTrips(tripsArray);
-  
-        if (tripsArray.length > 0) {
-          const mostRecentTrip = tripsArray[0]; // Assuming you want the most recent trip for feedback
+        // If we have completed trips needing feedback, show the dialog for the most recent one
+        if (completedTripsWithoutFeedback.length > 0) {
+          // Sort by creation date (newest first)
+          const sortedTrips = completedTripsWithoutFeedback.sort((a, b) => {
+            const dateA = a.createdAt instanceof Timestamp ? 
+              a.createdAt.toDate().getTime() : 
+              new Date(a.createdAt as string).getTime();
+            
+            const dateB = b.createdAt instanceof Timestamp ? 
+              b.createdAt.toDate().getTime() : 
+              new Date(b.createdAt as string).getTime();
+            
+            return dateB - dateA;
+          });
+          
+          const mostRecentTrip = sortedTrips[0];
           setSourceTrip(mostRecentTrip.startLocation);
           setDestinationTrip(mostRecentTrip.destination);      
           setTripIdForFeedback(mostRecentTrip.id);
@@ -79,326 +224,687 @@ const Index = () => {
       } else {
         // User is not logged in
         setUser(null);
+        setTrips([]);
+        setCompletedTrips([]);
       }
+      
+      setIsLoading(false);
     });
   
     return () => unsubscribe();
   }, []);
   
-
+  // Handle feedback submission
   const handleFeedbackSubmit = async () => {
     if (tripIdForFeedback && feedback.trim()) {
-      const db = getFirestore();
-      
-      // Update the trip document to mark feedback as submitted
-      const tripRef = doc(db, 'trip', tripIdForFeedback);
-      await updateDoc(tripRef, { feedbackSubmitted: true });
-      
-      // Use user's email as the document ID in the 'feedbacks' collection
-      const feedbackRef = doc(db, 'feedbacks', user?.email || 'default-email'); // 'feedbacks' collection, document ID is email
-      await setDoc(feedbackRef, {
-        email: user?.email,  // Storing user's email
-        source:sourceTrip,
-        destination:destinationTrip,
-        feedback: feedback,  // Storing user's feedback
-        createdAt: new Date() // Optional: store the submission time
-      });
+      try {
+        setFeedbackSubmitted(true);
+        const db = getFirestore();
+        
+        // Update the trip document to mark feedback as submitted
+        const tripRef = doc(db, 'trip', tripIdForFeedback);
+        await updateDoc(tripRef, { feedbackSubmitted: true });
+        
+        // Create a new feedback document in the 'feedbacks' collection
+        const feedbackRef = collection(db, 'feedbacks');
+        await setDoc(doc(feedbackRef), {
+          email: user?.email,
+          source: sourceTrip,
+          destination: destinationTrip,
+          feedback: feedback,
+          tripId: tripIdForFeedback,
+          createdAt: new Date()
+        });
   
-      // Reset and close the dialog after successful submission
-      setShowFeedbackDialog(false);
-      setFeedback('');
+        // Show success toast or message
+        toast.success("Thank you for your feedback!");
+        
+        // Reset and close the dialog after successful submission
+        setShowFeedbackDialog(false);
+        setFeedback('');
+        setFeedbackSubmitted(false);
+        
+        // Remove this trip from the completedTrips array
+        setCompletedTrips(prev => prev.filter(trip => trip.id !== tripIdForFeedback));
+      } catch (error) {
+        console.error("Error submitting feedback:", error);
+        setFeedbackSubmitted(false);
+      }
     }
   };
+
+  // Skip feedback for now
+  const skipFeedback = () => {
+    setShowFeedbackDialog(false);
+    setFeedback('');
+  };
+
+  // Handle profile completion
   const handleSubmit = async () => {
     if (name.trim() && religion.trim() && favoritePlaces.trim()) {
       if (user && user.email) {
-        const db = getFirestore(); // Get Firestore instance
+        const db = getFirestore();
         await setDoc(doc(db, 'users', user.email), {
           name: name,
           religion: religion,
           favoritePlaces: favoritePlaces,
           believerOfGod: believerOfGod,
           subscribed: false,
-
+          createdAt: new Date()
         });
 
-        setShowReligionDialog(false); // Close the dialog
+        setShowReligionDialog(false);
       }
     }
   };
 
+  // Handle toast close
   const handleToastClose = () => {
-    // Start the toast closing animation and hide it after it completes
-    setShowToast(false);
+    setToastClosing(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 500);
   };
 
   return (
     <>
-    {/* <span className='fixed'> */}
       <Navbar />
-      {/* </span> */}
 
+      {/* Promotional Toast Notification */}
       {showToast && (
-       <div id="toast-interactive" className="w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-sm dark:bg-gray-800 dark:text-gray-400 toast-animation" role="alert">
-    <div className="flex">
-    <div className="inline-flex items-center justify-center shrink-0 w-8 h-8 text-blue-500 bg-blue-100 rounded-lg dark:text-blue-300 dark:bg-blue-900">
-    <svg className="w-6 h-6 flex items-center justify-center" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M10 .5a9.5 9.5 0 0 0-9.5 9.5c0 4.45 3.26 8.14 7.6 9.21a1 1 0 0 0 .62.15.69.69 0 0 0 .58-.15C12.44 18.14 15.7 14.45 15.7 10a9.5 9.5 0 0 0-9.5-9.5ZM8.6 12.63a.93.93 0 0 1-.83-.73.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.29c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7Zm1.4-4.3a.93.93 0 0 1-.83-.73.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7Zm0 0ZM8.6 12.63a.93.93 0 0 1-.83-.73.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7a1 1 0 0 1 .12-.3.93.93 0 0 1-.83-.72.91.91 0 0 1 .06-1.16c.3-.32.74-.48 1.21-.48.47 0 .91.16 1.22.48a.88.88 0 0 1 .04 1.16.9.9 0 0 1-.83.73 1 1 0 0 1 .12.3c.54 1.3 1.62 2.45 3 2.7a.69.69 0 0 0 .58.15 1 1 0 0 0 .62-.15c-1.38-.25-2.46-1.4-3-2.7Zm0 0Z"/>
-    </svg>
-    <span className="sr-only">Refresh icon</span>
-</div>
-        <div className="ms-3 text-sm font-normal">
-            <span className="mb-1 text-sm font-semibold text-gray-900 dark:text-white">Explore best | It's Free</span>
-            <div className="mb-2 text-sm font-normal">You can checkout the best visiting places near your city.</div>
-            <div className="grid grid-cols-2 gap-2">
-                <div>
-                    <Link href="/BestPlaces">
-                        <div className="inline-flex justify-center w-full px-2 py-1.5 text-xs font-medium text-center text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">Let's Go</div>
-                    </Link>
+        <div className={`fixed top-20 mt-60 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md ${toastClosing ? 'animate-slide-up' : 'animate-slide-down'}`}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center p-4">
+              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900 rounded-full p-2">
+                <RiCompassDiscoverLine className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+              </div>
+              <div className="ml-3 w-0 flex-1">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">Discover Local Adventures</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Check out the best places to visit near your city. Limited time offers available!
+                </p>
+                <div className="mt-2 flex space-x-3">
+                  <Link href="/BestPlaces" className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    Explore Now
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleToastClose}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-full text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+                  >
+                    Maybe Later
+                  </button>
                 </div>
-                <div onClick={() => setShowToast(false)}>
-                    <div className="inline-flex justify-center w-full px-2 py-1.5 text-xs font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-600 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">Not now</div>
-                </div>
-            </div>
-        </div>
-    
-              <button type="button" className="ms-auto -mx-1.5 -my-1.5 bg-white items-center justify-center shrink-0 text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700" onClick={handleToastClose} aria-label="Close">
+              </div>
+              <div className="ml-4 flex-shrink-0 flex">
+                <button
+                  onClick={handleToastClose}
+                  className="bg-white dark:bg-gray-800 rounded-full inline-flex text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
                   <span className="sr-only">Close</span>
-                  <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                  </svg>
-              </button>
+                  <IoClose className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Your other code here */}
-
-      {/* CSS for the animation */}
-      <style jsx>{`
-        .toast-animation {
-          position: fixed;
-          top: -50px;
-          left: 50%;
-          transform: translateX(-50%);
-          animation: slideDown 1s ease-out forwards;
-        }
-
-        @keyframes slideDown {
-          0% {
-            top: -50px;
-          }
-          100% {
-            top: 20px;
-          }
-        }
-
-        .toast-animation.toast-close {
-          animation: slideUp 0.5s ease-in forwards;
-        }
-
-        @keyframes slideUp {
-          0% {
-            top: 20px;
-          }
-          100% {
-            top: -50px;
-          }
-        }
-      `}</style>
-
-      <div>
-        {/* Hero Section */}
-        <div className="flex flex-col md:flex-row justify-center items-center px-4 dark:bg-gray-800 py-10">
-          <div className="md:w-1/2 gap-6 md:gap-8 text-center md:text-left md:ml-20 ">
-            <h1 className="font-bold text-4xl md:text-6xl dark:text-white leading-tight">
-              Let's Explore <br />
-              <span className="text-cyan-600">Wonderful</span> <br /> World's Beauty
-            </h1>
-            <p className="text-lg md:text-2xl text-gray-700 dark:text-white mt-4">
-              Uncover hidden gems and create unforgettable memories. Your journey starts here. We offer curated travel experiences to inspire and delight.
-            </p>
-            <div className="flex justify-center md:justify-start gap-4 mt-6">
-              <button className="px-6 py-3 bg-cyan-600 text-white rounded-full transition hover:bg-cyan-500">
-                Book Now
-              </button>
-              <button className="px-6 py-3 font-medium border border-cyan-600 rounded-full text-cyan-600 hover:bg-cyan-100 transition">
-                More Destinations
-              </button>
-            </div>
-          </div>
-          <div className="flex md:w-1/2 justify-center mt-8 md:mt-0">
-            <img
-              src="/traveler.jpg"
-              alt="Traveler"
-              className="rounded-lg w-full object-cover shadow-lg md:h-96 md:mt-40"
+      <main className="overflow-hidden">
+        {/* Hero Section with Search Bar */}
+        <section className="relative h-screen flex items-center">
+          {/* Background Image with Overlay */}
+          <div className="absolute inset-0 w-full h-full">
+            <div className="absolute inset-0 bg-gradient-to-r from-black to-transparent opacity-60"></div>
+            <img 
+              src="/adventure.jpg" 
+              alt="Travel Adventure" 
+              className="w-full h-full object-cover"
             />
           </div>
-        </div>
 
-        {/* Section 2: Featured Destinations */}
-        <section className="bg-gray-50 dark:bg-gray-800 dark:opacity-95 py-16">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-semibold dark:text-white text-center mb-8 text-gray-800">
-              Featured Destinations
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Destination 1 */}
-              <div className="bg-white rounded-lg dark:bg-gray-900 shadow-md overflow-hidden">
-                <img
-                  src="/paris.jpg"
-                  alt="Destination 1"
-                  className="w-full h-56 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Paris, France</h3>
-                  <p className="text-gray-700 dark:text-white">
-                    Experience the romance of the Eiffel Tower and the charm of Parisian cafes.
-                  </p>
-                  <button className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition">
-                    Explore Paris
-                  </button>
+          <div className="container mx-auto px-4 z-10 text-white">
+            <div className="max-w-3xl">
+              <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-4">
+                Discover the Beauty <br />
+                <span className="text-blue-400">of Our World</span>
+              </h1>
+              <p className="text-xl md:text-2xl text-gray-200 mb-8">
+                Experience unforgettable journeys and create memories that last a lifetime.
+              </p>
+              
+              {/* Search Box */}
+              <div className="bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">Destination</label>
+                    <div className="relative">
+                      <FaMapMarkerAlt className="absolute left-3 top-3 text-blue-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Where do you want to go?"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 py-2 bg-white/20 border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">When</label>
+                    <div className="relative">
+                      <FaRegCalendarAlt className="absolute left-3 top-3 text-blue-400" />
+                      <input 
+                        type="date" 
+                        className="w-full pl-10 py-2 bg-white/20 border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">Travelers</label>
+                    <div className="relative">
+                      <FaUserFriends className="absolute left-3 top-3 text-blue-400" />
+                      <select className="w-full pl-10 py-2 bg-white/20 border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="1">1 Adult</option>
+                        <option value="2">2 Adults</option>
+                        <option value="3">2 Adults, 1 Child</option>
+                        <option value="4">2 Adults, 2 Children</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* Destination 2 */}
-              <div className="bg-white rounded-lg dark:bg-gray-900 shadow-md overflow-hidden">
-                <img
-                  src="/tokyo.jpg"
-                  alt="Destination 2"
-                  className="w-full h-56 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Kyoto, Japan</h3>
-                  <p className="text-gray-700 dark:text-white">
-                    Discover ancient temples, serene gardens, and the beauty of Japanese culture.
-                  </p>
-                  <button className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition">
-                    Explore Kyoto
-                  </button>
-                </div>
-              </div>
-
-              {/* Destination 3 */}
-              <div className="bg-white rounded-lg dark:bg-gray-900 shadow-md overflow-hidden">
-                <img
-                  src="/pachu.jpg"
-                  alt="Destination 3"
-                  className="w-full h-56 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Machu Picchu, Peru</h3>
-                  <p className="text-gray-700 dark:text-white">
-                    Hike through breathtaking landscapes to the lost city of the Incas.
-                  </p>
-                  <button className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition">
-                    Explore Machu Picchu
-                  </button>
-                </div>
+                <button className="mt-4 w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg flex items-center justify-center gap-2 transition duration-300">
+                  <BiSearchAlt className="text-xl" />
+                  Search Adventures
+                </button>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Religion Dialog */}
-        {showReligionDialog && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full">
-              <h3 className="text-2xl font-semibold text-gray-800 mb-4">Please Share Your Details</h3>
+        {/* Popular Destinations Section */}
+        <section className="py-20 bg-gray-50 dark:bg-gray-900">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                Popular Destinations
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Discover our most sought-after destinations that promise unforgettable experiences
+              </p>
+            </div>
 
-              <input
-                type="text"
-                placeholder="Enter your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
-              />
+            <div className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {trendingDestinations.map((destination) => (
+                  <div key={destination.id} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg transition-transform duration-300 hover:-translate-y-2">
+                    <div className="relative h-60 overflow-hidden">
+                      <img 
+                        src={destination.image} 
+                        alt={destination.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 text-blue-600 px-2 py-1 rounded-full text-sm font-medium">
+                        {destination.rating} ★
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{destination.name}</h3>
+                      <p className="text-gray-600 dark:text-gray-300 mb-4">{destination.description}</p>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-gray-900 dark:text-white font-bold">{destination.price}</span>
+                          <span className="text-gray-500 dark:text-gray-400 text-sm"> / {destination.duration}</span>
+                        </div>
+                        <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition duration-300">
+                          Book Now
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
               
-              <input
-                type="text"
-                placeholder="Enter your religion"
-                value={religion}
-                onChange={(e) => setReligion(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
-              />
-
-              {/* Favorite Places Dropdown */}
-              <select
-                value={favoritePlaces}
-                onChange={(e) => setFavoritePlaces(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4"
+              {/* Navigation arrows */}
+              <button 
+                onClick={prevDestination}
+                className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-6 bg-white dark:bg-gray-800 rounded-full p-3 shadow-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none hidden md:block"
               >
-                <option value="">Select your favorite type of place</option>
-                <option value="Historical">Historical</option>
-                <option value="Nature">Nature</option>
-                <option value="Adventure">Adventure</option>
-                <option value="Beaches">Beaches</option>
-                <option value="Cultural">Cultural</option>
-              </select>
+                <FaChevronLeft />
+              </button>
+              <button 
+                onClick={nextDestination}
+                className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-6 bg-white dark:bg-gray-800 rounded-full p-3 shadow-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none hidden md:block"
+              >
+                <FaChevronRight />
+              </button>
+            </div>
 
-              <label className="block mb-2 text-gray-700">Are you a believer of God?</label>
-              <div className="flex gap-4">
-                <label>
-                  <input
-                    type="radio"
-                    name="believerOfGod"
-                    checked={believerOfGod}
-                    onChange={() => setBelieverOfGod(true)}
-                  />
-                  Yes
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="believerOfGod"
-                    checked={!believerOfGod}
-                    onChange={() => setBelieverOfGod(false)}
-                  />
-                  No
-                </label>
+            <div className="text-center mt-10">
+              <Link href="/destinations" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 transition">
+                View all destinations
+                <FaChevronRight className="text-sm" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Experiences Section */}
+        <section className="py-20 bg-white dark:bg-gray-800">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                Unforgettable Experiences
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Curated adventures that go beyond the ordinary tourist experience
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {featuredExperiences.map((experience) => (
+                <div key={experience.id} className="group">
+                  <div className="relative h-80 rounded-xl overflow-hidden shadow-lg">
+                    <img 
+                      src={experience.image} 
+                      alt={experience.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <div className="flex items-center text-yellow-400 mb-2">
+                        <span className="mr-1">{experience.rating}</span>
+                        <span>★★★★★</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-1">{experience.title}</h3>
+                      <p className="text-gray-300 flex items-center">
+                        <FaMapMarkerAlt className="mr-1" />
+                        {experience.location}
+                      </p>
+                      <div className="mt-4 flex justify-between items-center">
+                        <span className="text-white font-bold">{experience.price}</span>
+                        <button className="px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-lg transition duration-300">
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Why Choose Us Section */}
+        <section className="py-20 bg-gradient-to-r from-blue-800 to-indigo-900 text-white">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4">Why Travel With Us</h2>
+              <p className="max-w-2xl mx-auto text-blue-100">
+                We're dedicated to providing exceptional travel experiences with attention to every detail
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20">
+                <div className="bg-blue-600/50 rounded-full w-16 h-16 flex items-center justify-center mb-6 mx-auto">
+                  <MdOutlineExplore className="text-3xl" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-4">Curated Experiences</h3>
+                <p className="text-blue-100 text-center">
+                  Our travel experts handpick each destination and experience to ensure you discover the authentic essence of each location.
+                </p>
               </div>
 
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition mt-4"
-              >
-                Submit
-              </button>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20">
+                <div className="bg-blue-600/50 rounded-full w-16 h-16 flex items-center justify-center mb-6 mx-auto">
+                  <FaUserFriends className="text-3xl" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-4">Local Guides</h3>
+                <p className="text-blue-100 text-center">
+                  Connect with knowledgeable local guides who share insider perspectives and hidden gems you won't find in guidebooks.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20">
+                <div className="bg-blue-600/50 rounded-full w-16 h-16 flex items-center justify-center mb-6 mx-auto">
+                  <MdTravelExplore className="text-3xl" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-4">Sustainable Travel</h3>
+                <p className="text-blue-100 text-center">
+                  We're committed to responsible tourism practices that respect local communities and preserve natural environments for future generations.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="py-20 bg-gray-50 dark:bg-gray-900">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">What Our Travelers Say</h2>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Hear from adventurers who've experienced our journeys firsthand
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {testimonials.map((testimonial) => (
+                <div key={testimonial.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 relative">
+                  <div className="absolute -top-5 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-blue-600 rounded-full p-1">
+                      <img 
+                        src={testimonial.avatar} 
+                        alt={testimonial.name}
+                        className="w-10 h-10 rounded-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="pt-6">
+                    <p className="text-gray-600 dark:text-gray-300 italic mb-6">"{testimonial.comment}"</p>
+                    <div className="flex items-center">
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white">{testimonial.name}</h4>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">{testimonial.location}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 bg-white dark:bg-gray-800 relative overflow-hidden">
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-900 rounded-2xl p-10 md:p-16">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-4">Ready for Your Next Adventure?</h2>
+                  <p className="text-blue-100 mb-8">
+                    Sign up for our newsletter and be the first to know about special offers, new destinations, and travel inspiration.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4"><input 
+                      type="email" 
+                      placeholder="Your email address" 
+                      className="flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <button className="bg-white text-blue-600 font-medium px-6 py-3 rounded-lg hover:bg-gray-100 transition duration-300">
+                      Subscribe
+                    </button>
+                  </div>
+                </div>
+                <div className="hidden md:block">
+                  <img 
+                    src="https://images.unsplash.com/photo-1493134799591-2c9eed26201a?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y2l0eSUyMHNreWxpbmV8ZW58MHx8MHx8fDA%3D" 
+                    alt="Travel Inspiration" 
+                    className="rounded-lg shadow-lg" 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Background decorative elements */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-blue-500 rounded-full opacity-10"></div>
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-indigo-500 rounded-full opacity-10"></div>
+        </section>
+
+        {/* User Profile Completion Dialog */}
+        {showReligionDialog && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-lg w-full">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Complete Your Profile</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Help us personalize your experience by sharing a few details about yourself.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Religion</label>
+                  <input
+                    type="text"
+                    placeholder="Enter your religion"
+                    value={religion}
+                    onChange={(e) => setReligion(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Travel Preferences</label>
+                  <select
+                    value={favoritePlaces}
+                    onChange={(e) => setFavoritePlaces(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select your favorite type of place</option>
+                    <option value="Historical">Historical Sites</option>
+                    <option value="Nature">Nature & Outdoors</option>
+                    <option value="Adventure">Adventure & Activities</option>
+                    <option value="Beaches">Beaches & Islands</option>
+                    <option value="Cultural">Cultural Experiences</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Are you a believer of God?</label>
+                  <div className="flex gap-6">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        name="believerOfGod"
+                        checked={believerOfGod}
+                        onChange={() => setBelieverOfGod(true)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        name="believerOfGod"
+                        checked={!believerOfGod}
+                        onChange={() => setBelieverOfGod(false)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">No</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    onClick={handleSubmit}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-md transition duration-300"
+                  >
+                    Complete Profile
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-
-{showFeedbackDialog && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full">
-              <h3 className="text-2xl font-semibold  text-gray-800">We value your feedback!</h3>
-              <p className=' text-black font-mono mb-4'>Tell use something about your last trip from <span className='text-cyan-600'>{sourceTrip}</span> to <span className='text-cyan-600'>{destinationTrip}</span></p>
+        {/* Trip Feedback Dialog - Only shown for completed trips */}
+        {showFeedbackDialog && completedTrips.length > 0 && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-lg w-full">
+              <div className="flex items-center mb-4">
+                <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full mr-3">
+                  <FaCheckCircle className="text-green-600 dark:text-green-400 text-xl" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Your Trip Was Completed!</h3>
+              </div>
+              
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                We hope you enjoyed your recent journey from <span className="font-medium text-blue-600 dark:text-blue-400">{sourceTrip}</span> to <span className="font-medium text-blue-600 dark:text-blue-400">{destinationTrip}</span>. Would you like to share your experience with other travelers?
+              </p>
+              
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Please share your feedback"
-                className="w-full px-4 py-2 dark:text-white text-black border border-gray-300 rounded-md mb-4"
+                placeholder="Tell us about your experience. What did you enjoy most? Any suggestions for improvement?"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-40 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
               />
-              <button
-                onClick={handleFeedbackSubmit}
-                className="px-6 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 transition mt-4"
-              >
-                Submit Feedback
-              </button>
+              
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={skipFeedback}
+                  className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300"
+                  disabled={feedbackSubmitted}
+                >
+                  Maybe Later
+                </button>
+                <button
+                  onClick={handleFeedbackSubmit}
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-md transition duration-300 flex items-center"
+                  disabled={feedbackSubmitted}
+                >
+                  {feedbackSubmitted ? (
+                    <>
+                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Feedback'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-      </div>
+        {/* Custom Animation Styles */}
+        <style jsx>{`
+          @keyframes slideDown {
+            0% {
+              opacity: 0;
+              transform: translate(-50%, -20px);
+            }
+            100% {
+              opacity: 1;
+              transform: translate(-50%, 0);
+            }
+          }
+          
+          @keyframes slideUp {
+            0% {
+              opacity: 1;
+              transform: translate(-50%, 0);
+            }
+            100% {
+              opacity: 0;
+              transform: translate(-50%, -20px);
+            }
+          }
+          
+          .animate-slide-down {
+            animation: slideDown 0.5s ease-out forwards;
+          }
+          
+          .animate-slide-up {
+            animation: slideUp 0.5s ease-in forwards;
+          }
+        `}</style>
+      </main>
 
-
-
-
-
-
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white pt-16 pb-8">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+            <div>
+              <h3 className="text-xl font-bold mb-4">Explore</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Destinations</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Experiences</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Adventure Tours</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Group Trips</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Last Minute Deals</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4">Company</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white transition">About Us</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Careers</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Blog</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Press</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Gift Cards</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4">Support</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Contact Us</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Help Center</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">COVID-19 Updates</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Cancellation Policy</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition">Privacy Policy</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4">Stay Connected</h3>
+              <p className="text-gray-400 mb-4">Subscribe to our newsletter for travel inspiration and special offers</p>
+              <div className="flex">
+                <input
+                  type="email"
+                  placeholder="Your email address"
+                  className="px-4 py-2 rounded-l-lg flex-1 bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-r-lg text-white">
+                  Subscribe
+                </button>
+              </div>
+              <div className="flex space-x-4 mt-6">
+                <a href="#" className="text-gray-400 hover:text-white transition">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" />
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <p className="text-gray-400 text-sm mb-4 md:mb-0">
+                &copy; {new Date().getFullYear()} World Explorer. All rights reserved.
+              </p>
+              <div className="flex space-x-6">
+                <a href="#" className="text-gray-400 hover:text-white text-sm transition">Terms of Service</a>
+                <a href="#" className="text-gray-400 hover:text-white text-sm transition">Privacy Policy</a>
+                <a href="#" className="text-gray-400 hover:text-white text-sm transition">Cookie Policy</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </>
   );
 };
 
-export default Index;
+export default Landing;
+                    
