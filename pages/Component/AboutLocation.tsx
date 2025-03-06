@@ -37,12 +37,13 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
   const [showFullImage, setShowFullImage] = useState<boolean>(false);
   const [weather, setWeather] = useState<any>(null);
   const [currency, setCurrency] = useState<any>(null);
+  const [parsedSections, setParsedSections] = useState<Record<string, string>>({});
   const fallbackImage = "/images/default-location.jpg";
   const safeDestination = destination || "Unknown Location";
 
-  // Key sections from the bio - these would be detected from the content
+  // Key sections from the bio
   const sections = useMemo(() => {
-    const defaultSections = [
+    return [
       { id: 'overview', label: 'Overview', icon: <FaInfoCircle /> },
       { id: 'history', label: 'History', icon: <FaHistory /> },
       { id: 'attractions', label: 'Attractions', icon: <MdOutlineAttractions /> },
@@ -50,10 +51,7 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
       { id: 'activities', label: 'Activities', icon: <FaUmbrellaBeach /> },
       { id: 'tips', label: 'Travel Tips', icon: <FaUserFriends /> }
     ];
-    
-    // In a real implementation, you would parse locationBio to find these sections
-    return defaultSections;
-  }, [locationBio]);
+  }, []);
 
   // Fetch the destination image from Pixabay
   useEffect(() => {
@@ -61,6 +59,14 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
     fetchWeather();
     fetchCurrencyInfo();
   }, [destination]);
+
+  // Parse locationBio into sections
+  useEffect(() => {
+    if (locationBio) {
+      const sectionContent = extractSections(locationBio);
+      setParsedSections(sectionContent);
+    }
+  }, [locationBio]);
 
   const fetchAboutImage = async () => {
     setIsLoading(true);
@@ -95,7 +101,6 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
   // Simulated weather fetch (normally would use a real weather API)
   const fetchWeather = async () => {
     // This is a placeholder - in production, you would use a real weather API
-    // For this example, we'll just set some mock data
     setTimeout(() => {
       setWeather({
         temp: Math.floor(Math.random() * 15) + 15, // Random temp between 15-30°C
@@ -118,34 +123,74 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
   };
 
   // Extract meaningful sections from the markdown content
-  const extractSections = (content: string) => {
-    // This is a placeholder - in a real implementation, you would parse the markdown
-    // to extract sections and categorize them
-    return content;
+  const extractSections = (content: string): Record<string, string> => {
+    const sections: Record<string, string> = {
+      overview: '',
+      history: '',
+      attractions: '',
+      food: '',
+      activities: '',
+      tips: ''
+    };
+    
+    // Default to showing everything in overview if we can't parse properly
+    sections.overview = content;
+    
+    // Simple parsing based on markdown headers
+    try {
+      // Split content by headers
+      const lines = content.split('\n');
+      let currentSection = 'overview';
+      let headerPattern = /^#+\s+(.+)$/;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const headerMatch = line.match(headerPattern);
+        
+        if (headerMatch) {
+          const header = headerMatch[1].toLowerCase();
+          
+          // Map header to section
+          if (header.includes('history') || header.includes('background') || header.includes('past')) {
+            currentSection = 'history';
+          } else if (header.includes('attraction') || header.includes('sights') || header.includes('landmark') 
+                   || header.includes('places to visit') || header.includes('monuments')) {
+            currentSection = 'attractions';
+          } else if (header.includes('food') || header.includes('cuisine') || header.includes('dishes')
+                   || header.includes('eat') || header.includes('dining')) {
+            currentSection = 'food';
+          } else if (header.includes('activit') || header.includes('experience') || header.includes('adventure')
+                   || header.includes('things to do') || header.includes('entertainment')) {
+            currentSection = 'activities';
+          } else if (header.includes('tip') || header.includes('guide') || header.includes('advice')
+                   || header.includes('recommendation') || header.includes('practical')
+                   || header.includes('travel information')) {
+            currentSection = 'tips';
+          }
+        }
+        
+        // Add line to the current section
+        sections[currentSection] += line + '\n';
+      }
+      
+      // If a section is empty, assign a default placeholder message
+      Object.keys(sections).forEach(key => {
+        if (!sections[key].trim()) {
+          sections[key] = `No specific information available about ${key} for ${safeDestination}. Please check the overview section for general information.`;
+        }
+      });
+      
+      return sections;
+    } catch (error) {
+      console.error("Error parsing content into sections:", error);
+      return { overview: content };
+    }
   };
 
-  // Memoize markdown rendering to prevent unnecessary re-renders
-  const markdownContent = useMemo(() => (
-    <ReactMarkdown 
-      remarkPlugins={[remarkGfm]}
-      components={{
-        h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" {...props} />,
-        h2: ({ node, ...props }) => <h2 className="text-xl font-semibold text-blue-600 dark:text-blue-300 mt-6 mb-3" {...props} />,
-        h3: ({ node, ...props }) => <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-4 mb-2" {...props} />,
-        p: ({ node, ...props }) => <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed" {...props} />,
-        ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
-        ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
-        li: ({ node, ...props }) => <li className="text-gray-700 dark:text-gray-300" {...props} />,
-        strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
-        a: ({ node, ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-        blockquote: ({ node, ...props }) => (
-          <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 italic text-gray-700 dark:text-gray-300 rounded-r" {...props} />
-        ),
-      }}
-    >
-      {extractSections(locationBio || "No information available for this destination.")}
-    </ReactMarkdown>
-  ), [locationBio]);
+  // Get content for the active tab
+  const getActiveContent = () => {
+    return parsedSections[activeTab] || "No information available for this section.";
+  };
 
   const altText = imageAlt || `Scenic view of ${safeDestination}`;
 
@@ -160,6 +205,12 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
     initial: { opacity: 0 },
     animate: { opacity: 1, transition: { duration: 0.3 } },
     exit: { opacity: 0, transition: { duration: 0.2 } }
+  };
+
+  const contentVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+    exit: { opacity: 0, y: -20, transition: { duration: 0.2 } }
   };
 
   // Function to get weather icon (placeholder - would be based on actual weather data)
@@ -292,7 +343,35 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
 
         {/* Content */}
         <div className="p-6 overflow-auto max-h-[60vh]">
-          {markdownContent}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              variants={contentVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" {...props} />,
+                  h2: ({ node, ...props }) => <h2 className="text-xl font-semibold text-blue-600 dark:text-blue-300 mt-6 mb-3" {...props} />,
+                  h3: ({ node, ...props }) => <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-4 mb-2" {...props} />,
+                  p: ({ node, ...props }) => <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed" {...props} />,
+                  ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
+                  ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
+                  li: ({ node, ...props }) => <li className="text-gray-700 dark:text-gray-300" {...props} />,
+                  strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
+                  a: ({ node, ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                  blockquote: ({ node, ...props }) => (
+                    <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 italic text-gray-700 dark:text-gray-300 rounded-r" {...props} />
+                  ),
+                }}
+              >
+                {getActiveContent()}
+              </ReactMarkdown>
+            </motion.div>
+          </AnimatePresence>
           
           {/* Bottom action buttons */}
           <div className="flex flex-wrap gap-4 mt-8 justify-center">

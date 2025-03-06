@@ -45,6 +45,7 @@ const Landing = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [rating, setRating] = useState<number>(0);
 
   // Popular destinations data
   const popularDestinations = [
@@ -163,7 +164,7 @@ const Landing = () => {
     );
   };
 
-  // Fetch user data, check if new user, and get completed trips that need feedback
+  // Fetch user data and check for their latest trip that needs feedback
   useEffect(() => {
     setIsLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -179,31 +180,13 @@ const Landing = () => {
           setShowReligionDialog(true);
         }
   
-        // Get all trips by this user
-        const tripsRef = collection(db, 'trip');
-        const q = query(tripsRef, where('email', '==', user.email));
-        const querySnapshot = await getDocs(q);
-  
-        const allTrips: Trip[] = [];
-        const completedTripsWithoutFeedback: Trip[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          const tripData = { ...doc.data(), id: doc.id } as Trip;
-          allTrips.push(tripData);
+        // First check if user document has trips array (new structure)
+        if (docSnapshot.exists() && docSnapshot.data().trips) {
+          const userTrips = docSnapshot.data().trips;
           
-          // Filter for completed trips that need feedback
-          if (tripData.completed === true && tripData.feedbackSubmitted === false) {
-            completedTripsWithoutFeedback.push(tripData);
-          }
-        });
-  
-        setTrips(allTrips);
-        setCompletedTrips(completedTripsWithoutFeedback);
-  
-        // If we have completed trips needing feedback, show the dialog for the most recent one
-        if (completedTripsWithoutFeedback.length > 0) {
           // Sort by creation date (newest first)
-          const sortedTrips = completedTripsWithoutFeedback.sort((a, b) => {
+          const sortedTrips = [...userTrips].sort((a, b) => {
+            // Handle different date formats
             const dateA = a.createdAt instanceof Timestamp ? 
               a.createdAt.toDate().getTime() : 
               new Date(a.createdAt as string).getTime();
@@ -215,17 +198,66 @@ const Landing = () => {
             return dateB - dateA;
           });
           
-          const mostRecentTrip = sortedTrips[0];
-          setSourceTrip(mostRecentTrip.startLocation);
-          setDestinationTrip(mostRecentTrip.destination);      
-          setTripIdForFeedback(mostRecentTrip.id);
-          setShowFeedbackDialog(true);
+          setTrips(sortedTrips);
+          
+          // Check if the most recent trip needs feedback
+          if (sortedTrips.length > 0) {
+            const mostRecentTrip = sortedTrips[0];
+            
+            // If the most recent trip doesn't have feedback submitted
+            if (!mostRecentTrip.feedbackSubmitted) {
+              setSourceTrip(mostRecentTrip.startLocation);
+              setDestinationTrip(mostRecentTrip.destination);      
+              setTripIdForFeedback(mostRecentTrip.id);
+              setShowFeedbackDialog(true);
+            }
+          }
+        } else {
+          // Fall back to checking trip collection (old structure)
+          const tripsRef = collection(db, 'trip');
+          const q = query(tripsRef, where('email', '==', user.email));
+          const querySnapshot = await getDocs(q);
+      
+          const allTrips: Trip[] = [];
+          
+          querySnapshot.forEach((doc) => {
+            const tripData = { ...doc.data(), id: doc.id } as Trip;
+            allTrips.push(tripData);
+          });
+      
+          if (allTrips.length > 0) {
+            // Sort by creation date (newest first)
+            const sortedTrips = allTrips.sort((a, b) => {
+              const dateA = a.createdAt instanceof Timestamp ? 
+                a.createdAt.toDate().getTime() : 
+                new Date(a.createdAt as string).getTime();
+              
+              const dateB = b.createdAt instanceof Timestamp ? 
+                b.createdAt.toDate().getTime() : 
+                new Date(b.createdAt as string).getTime();
+              
+              return dateB - dateA;
+            });
+            
+            setTrips(sortedTrips);
+            
+            // Get the latest trip
+            const mostRecentTrip = sortedTrips[0];
+            
+            // If it doesn't have feedback yet
+            if (!mostRecentTrip.feedbackSubmitted) {
+              setSourceTrip(mostRecentTrip.startLocation);
+              setDestinationTrip(mostRecentTrip.destination);      
+              setTripIdForFeedback(mostRecentTrip.id);
+              setShowFeedbackDialog(true);
+            }
+          }
         }
       } else {
         // User is not logged in
         setUser(null);
         setTrips([]);
-        setCompletedTrips([]);
+        setShowFeedbackDialog(false);
       }
       
       setIsLoading(false);
@@ -236,14 +268,49 @@ const Landing = () => {
   
   // Handle feedback submission
   const handleFeedbackSubmit = async () => {
-    if (tripIdForFeedback && feedback.trim()) {
+    if (tripIdForFeedback && feedback.trim() && rating > 0) {
       try {
         setFeedbackSubmitted(true);
         const db = getFirestore();
         
-        // Update the trip document to mark feedback as submitted
-        const tripRef = doc(db, 'trip', tripIdForFeedback);
-        await updateDoc(tripRef, { feedbackSubmitted: true });
+        // Check if the trip exists in the user's trips array first (new structure)
+        if (user && user.email) {
+          const userDocRef = doc(db, 'users', user.email);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists() && userDoc.data().trips) {
+            const userTrips = userDoc.data().trips;
+            const updatedTrips = userTrips.map((trip: any) => {
+              if (trip.id === tripIdForFeedback) {
+                return {
+                  ...trip,
+                  feedbackSubmitted: true,
+                  feedbackContent: feedback,
+                  feedbackRating: rating,
+                  feedbackDate: new Date().toISOString()
+                };
+              }
+              return trip;
+            });
+            
+            // Update the trips array in the user document
+            await updateDoc(userDocRef, { trips: updatedTrips });
+          }
+        }
+        
+        // Also update the trip document in the trip collection (for backwards compatibility)
+        try {
+          const tripRef = doc(db, 'trip', tripIdForFeedback);
+          const tripDoc = await getDoc(tripRef);
+          
+          if (tripDoc.exists()) {
+            await updateDoc(tripRef, { 
+              feedbackSubmitted: true 
+            });
+          }
+        } catch (error) {
+          console.error('Error updating trip document:', error);
+        }
         
         // Create a new feedback document in the 'feedbacks' collection
         const feedbackRef = collection(db, 'feedbacks');
@@ -252,24 +319,41 @@ const Landing = () => {
           source: sourceTrip,
           destination: destinationTrip,
           feedback: feedback,
+          rating: rating,
           tripId: tripIdForFeedback,
           createdAt: new Date()
         });
   
-        // Show success toast or message
+        // Show success toast
         toast.success("Thank you for your feedback!");
         
         // Reset and close the dialog after successful submission
         setShowFeedbackDialog(false);
         setFeedback('');
+        setRating(0);
         setFeedbackSubmitted(false);
         
-        // Remove this trip from the completedTrips array
-        setCompletedTrips(prev => prev.filter(trip => trip.id !== tripIdForFeedback));
+        // Update local state to reflect the changes
+        setTrips(prev => prev.map(trip => {
+          if (trip.id === tripIdForFeedback) {
+            return {
+              ...trip,
+              feedbackSubmitted: true
+            };
+          }
+          return trip;
+        }));
       } catch (error) {
         console.error("Error submitting feedback:", error);
         setFeedbackSubmitted(false);
+        toast.error("Failed to submit feedback. Please try again.");
       }
+    } else if (!feedback.trim()) {
+      toast.error("Please enter some feedback before submitting.");
+      setFeedbackSubmitted(false);
+    } else if (rating === 0) {
+      toast.error("Please rate your experience.");
+      setFeedbackSubmitted(false);
     }
   };
 
@@ -277,6 +361,7 @@ const Landing = () => {
   const skipFeedback = () => {
     setShowFeedbackDialog(false);
     setFeedback('');
+    setRating(0);
   };
 
   // Handle profile completion
@@ -290,6 +375,7 @@ const Landing = () => {
           favoritePlaces: favoritePlaces,
           believerOfGod: believerOfGod,
           subscribed: false,
+          trips: [], // Initialize empty trips array for new users
           createdAt: new Date()
         });
 
@@ -312,7 +398,7 @@ const Landing = () => {
 
       {/* Promotional Toast Notification */}
       {showToast && (
-        <div className={`fixed top-20 mt-60 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md ${toastClosing ? 'animate-slide-up' : 'animate-slide-down'}`}>
+        <div className={`fixed top-0 mt-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md ${toastClosing ? 'animate-slide-up' : 'animate-slide-down'}`}>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
             <div className="flex items-center p-4">
               <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900 rounded-full p-2">
@@ -550,6 +636,7 @@ const Landing = () => {
                   <MdOutlineExplore className="text-3xl" />
                 </div>
                 <h3 className="text-xl font-bold text-center mb-4">Curated Experiences</h3>
+                <p className="text-<h3 text-xl font-bold text-center mb-4">Curated Experiences</p>
                 <p className="text-blue-100 text-center">
                   Our travel experts handpick each destination and experience to ensure you discover the authentic essence of each location.
                 </p>
@@ -738,25 +825,46 @@ const Landing = () => {
           </div>
         )}
 
-        {/* Trip Feedback Dialog - Only shown for completed trips */}
-        {showFeedbackDialog && completedTrips.length > 0 && (
+        {/* Trip Feedback Dialog - Only shown for the latest trip without feedback */}
+        {showFeedbackDialog && tripIdForFeedback && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
             <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-lg w-full">
               <div className="flex items-center mb-4">
-                <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full mr-3">
-                  <FaCheckCircle className="text-green-600 dark:text-green-400 text-xl" />
+                <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full mr-3">
+                  <MdTravelExplore className="text-blue-600 dark:text-blue-400 text-xl" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Your Trip Was Completed!</h3>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">How was your trip?</h3>
               </div>
               
               <p className="text-gray-600 dark:text-gray-300 mb-6">
-                We hope you enjoyed your recent journey from <span className="font-medium text-blue-600 dark:text-blue-400">{sourceTrip}</span> to <span className="font-medium text-blue-600 dark:text-blue-400">{destinationTrip}</span>. Would you like to share your experience with other travelers?
+                We noticed you recently traveled from <span className="font-medium text-blue-600 dark:text-blue-400">{sourceTrip}</span> to <span className="font-medium text-blue-600 dark:text-blue-400">{destinationTrip}</span>. Your feedback helps us improve and assists other travelers in planning their journeys.
               </p>
+              
+              {/* Rating Stars */}
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">How would you rate your overall experience?</p>
+                <div className="flex space-x-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={`text-2xl ${
+                        rating >= star
+                          ? 'text-yellow-400'
+                          : 'text-gray-300 dark:text-gray-600'
+                      }`}
+                      onClick={() => setRating(star)}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
               
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Tell us about your experience. What did you enjoy most? Any suggestions for improvement?"
+                placeholder="What did you enjoy most about your trip? Any suggestions for improvement? Your insights help us and other travelers!"
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-40 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
               />
               
@@ -770,8 +878,10 @@ const Landing = () => {
                 </button>
                 <button
                   onClick={handleFeedbackSubmit}
-                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-md transition duration-300 flex items-center"
-                  disabled={feedbackSubmitted}
+                  className={`px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-md transition duration-300 flex items-center ${
+                    !feedback.trim() || rating === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={feedbackSubmitted || !feedback.trim() || rating === 0}
                 >
                   {feedbackSubmitted ? (
                     <>
@@ -820,6 +930,7 @@ const Landing = () => {
           }
         `}</style>
       </main>
+    
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white pt-16 pb-8">
@@ -907,4 +1018,3 @@ const Landing = () => {
 };
 
 export default Landing;
-                    

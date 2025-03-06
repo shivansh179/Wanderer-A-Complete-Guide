@@ -1,4 +1,5 @@
 "use client"
+"use client"
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '@/pages/Component/Navbar';
@@ -9,7 +10,7 @@ import ResultsSection from './ResultsSection';
 import { Image, NewsItem, Video } from '@/types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import AuthGuard from '../AuthGuard/AuthGuard';
-import { collection, getFirestore, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, getFirestore, setDoc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { doc, getDoc } from 'firebase/firestore';
 import router from 'next/router';
 import { FaSpinner, FaLock, FaCheckCircle } from 'react-icons/fa';
@@ -57,13 +58,14 @@ const Index = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalAnimating, setModalAnimating] = useState(false);
   const [planGenerationSuccess, setPlanGenerationSuccess] = useState(false);
+  const [currentTripId, setCurrentTripId] = useState('');
   
   const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU';
   const PEXELS_API_KEY = '2wBg5SOXdnIFQApqDr5zTPq8MjvJGCcmXtIa3orVKwYe94fRNfZzuSwW';
+  const db = getFirestore();
 
   // Fetch user details from Firestore
   const fetchUserDetailsFromFirestore = async (userEmail: string) => {
-    const db = getFirestore();
     const userDocRef = doc(db, 'users', userEmail);
     const docSnapshot = await getDoc(userDocRef);
 
@@ -74,9 +76,8 @@ const Index = () => {
       return null;
     }
   };
-  
-  const db = getFirestore();
 
+  // Increment plan generation count
   const incrementPlanGenerationCount = async (userEmail: string) => {
     const userDocRef = doc(db, 'users', userEmail);
     
@@ -124,6 +125,219 @@ const Index = () => {
     
     return unsubscribe;
   }, []);
+
+  // Get user trips
+  const getUserTrips = async () => {
+    if (!user || !user.email) {
+      console.error('User not authenticated');
+      return [];
+    }
+    
+    try {
+      const userDocRef = doc(db, 'users', user.email);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists() && userDoc.data().trips) {
+        // Sort by creation date (newest first)
+        return [...userDoc.data().trips].sort((a: any, b: any) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error fetching user trips:', error);
+      return [];
+    }
+  };
+
+  // Get trips by feedback status
+  const getTripsByFeedbackStatus = async (hasFeedback: boolean) => {
+    try {
+      const allTrips = await getUserTrips();
+      return allTrips.filter((trip: any) => trip.feedbackSubmitted === hasFeedback);
+    } catch (error) {
+      console.error('Error filtering trips by feedback status:', error);
+      return [];
+    }
+  };
+
+  // Save trip to Firebase
+  const saveTrip = async (tripData: any, fullPlan: string) => {
+    if (!user || !user.email) {
+      console.error('User not authenticated');
+      return null;
+    }
+    
+    try {
+      // Generate a unique trip ID
+      const tripId = new Date().getTime().toString();
+      
+      // Create trip object without the full plan
+      const tripToSave = {
+        id: tripId,
+        ...tripData,
+        planSummary: fullPlan.substring(0, 200) + '...', // Just a preview
+        hasPlan: true,
+        feedbackSubmitted: false,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Save to user's trips array
+      const userDocRef = doc(db, 'users', user.email);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        if (userDoc.data().trips) {
+          await updateDoc(userDocRef, {
+            trips: arrayUnion(tripToSave)
+          });
+        } else {
+          await updateDoc(userDocRef, {
+            trips: [tripToSave]
+          });
+        }
+      } else {
+        await setDoc(userDocRef, {
+          trips: [tripToSave]
+        });
+      }
+      
+      // Save full plan separately
+      const planDocRef = doc(db, 'plans', tripId);
+      await setDoc(planDocRef, {
+        userId: user.email,
+        tripId,
+        fullPlan,
+        createdAt: new Date().toISOString()
+      });
+      
+      setCurrentTripId(tripId);
+      return tripId;
+    } catch (error) {
+      console.error('Error saving trip:', error);
+      return null;
+    }
+  };
+
+  // Fetch full plan from separate collection
+  const fetchFullPlan = async (tripId: string) => {
+    if (!tripId) {
+      console.error('No trip ID provided');
+      return null;
+    }
+    
+    try {
+      const planDocRef = doc(db, 'plans', tripId);
+      const planDoc = await getDoc(planDocRef);
+      
+      if (planDoc.exists()) {
+        return planDoc.data().fullPlan;
+      } else {
+        console.warn('No plan document found for this trip');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching full plan:', error);
+      return null;
+    }
+  };
+
+  // Update feedback status for a trip
+  const updateTripFeedback = async (tripId: string, feedbackData: any) => {
+    if (!user || !user.email || !tripId) {
+      console.error('Missing user or trip ID');
+      return false;
+    }
+    
+    try {
+      const userDocRef = doc(db, 'users', user.email);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists() && userDoc.data().trips) {
+        const trips = userDoc.data().trips;
+        const updatedTrips = trips.map((trip: any) => {
+          if (trip.id === tripId) {
+            return {
+              ...trip,
+              feedbackSubmitted: true,
+              feedbackData
+            };
+          }
+          return trip;
+        });
+        
+        await updateDoc(userDocRef, { trips: updatedTrips });
+        
+        // Save feedback separately if needed
+        const feedbackDocRef = doc(db, 'feedback', tripId);
+        await setDoc(feedbackDocRef, {
+          userId: user.email,
+          tripId,
+          ...feedbackData,
+          createdAt: new Date().toISOString()
+        });
+        
+        setFeedbackSubmitted(true);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error updating feedback:', error);
+      return false;
+    }
+  };
+
+  // Load previous trip
+  const loadPreviousTrip = async (tripId: string) => {
+    try {
+      // Get trip metadata
+      const trips = await getUserTrips();
+      const selectedTrip = trips.find((trip: any) => trip.id === tripId);
+      
+      if (!selectedTrip) {
+        console.error('Trip not found');
+        return;
+      }
+      
+      // Set trip details
+      setStartLocation(selectedTrip.startLocation);
+      setDestination(selectedTrip.destination);
+      setDays(selectedTrip.days);
+      setBudget(selectedTrip.budget);
+      setPeopleCount(selectedTrip.peopleCount);
+      setTripForFamily(selectedTrip.tripForFamily);
+      setFamilyElderlyCount(selectedTrip.familyElderlyCount || '');
+      setFamilyLadiesCount(selectedTrip.familyLadiesCount || '');
+      setFamilyChildrenCount(selectedTrip.familyChildrenCount || '');
+      setFamilyPreferences(selectedTrip.familyPreferences || '');
+      setCurrentTripId(selectedTrip.id);
+      setFeedbackSubmitted(selectedTrip.feedbackSubmitted);
+      setPlanGenerated(true);
+      
+      // Fetch the full plan from separate storage
+      const fullPlan = await fetchFullPlan(tripId);
+      if (fullPlan) {
+        setPlan(fullPlan);
+      } else {
+        setPlan('Plan details not available. You may need to regenerate this plan.');
+      }
+      
+      // Update other state values
+      setImageFetchDestination(selectedTrip.destination);
+      setActiveSection('plan');
+      setPreviousValue(selectedTrip.destination);
+      setCurrentValue(selectedTrip.destination);
+      setLocation(selectedTrip.destination);
+      
+      // Fetch additional data
+      fetchAboutLocation(selectedTrip.destination);
+      fetchNewsForDestination(selectedTrip.destination);
+    } catch (error) {
+      console.error('Error loading trip:', error);
+    }
+  };
 
   // Generate travel plan
   const planFetcher = async () => {
@@ -239,27 +453,24 @@ const Index = () => {
       // Increment plan generation count
       incrementPlanGenerationCount(user.email);
   
-      // Save trip data to Firestore
+      // Create trip data object WITHOUT the full plan
       const tripData = {
         email: user.email,
-        name,
+        name: userDetails.name,
         startLocation,
         destination,
         days,
         budget,
         peopleCount,
         tripForFamily,
-        familyElderlyCount,
-        familyLadiesCount,
-        familyChildrenCount,
-        familyPreferences,
-        generatedPlan: extractedPlan,
-        feedbackSubmitted,
-        createdAt: new Date().toISOString()
+        familyElderlyCount: familyElderlyCount || '',
+        familyLadiesCount: familyLadiesCount || '',
+        familyChildrenCount: familyChildrenCount || '',
+        familyPreferences: familyPreferences || '',
       };
   
-      const tripRef = doc(collection(db, "trip"), user.email);
-      await setDoc(tripRef, tripData, { merge: true });
+      // Save the trip to Firestore (without full plan in trips array)
+      await saveTrip(tripData, extractedPlan);
   
     } catch (err: any) {
       console.error('Error fetching the plan:', err);
@@ -268,6 +479,51 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Delete a trip
+  const deleteTrip = async (tripId: string) => {
+    if (!user || !user.email) return false;
+    
+    try {
+      // First, get all user trips
+      const userDocRef = doc(db, 'users', user.email);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists() && userDoc.data().trips) {
+        // Filter out the trip to delete
+        const updatedTrips = userDoc.data().trips.filter((trip: any) => trip.id !== tripId);
+        
+        // Update the user document with the filtered trips
+        await updateDoc(userDocRef, { trips: updatedTrips });
+        
+        // Delete the full plan document
+        try {
+          const planDocRef = doc(db, 'plans', tripId);
+          await deleteDoc(planDocRef);
+        } catch (err) {
+          console.warn('Could not delete plan document (might not exist)');
+        }
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error deleting trip:', error);
+      return false;
+    }
+  };
+
+  // Submit feedback for current trip
+  const submitFeedback = async (feedbackData: any) => {
+    if (!currentTripId) {
+      console.error('No active trip selected');
+      return false;
+    }
+    
+    const result = await updateTripFeedback(currentTripId, feedbackData);
+    return result;
   };
 
   // Fetch destination information
@@ -441,6 +697,7 @@ const Index = () => {
     }
   };
 
+  // Toggle image power
   const isActive = () => {
     setImagePower(!imagePower);
   };

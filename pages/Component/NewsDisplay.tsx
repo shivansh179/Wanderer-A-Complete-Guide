@@ -187,7 +187,7 @@ const NewsDisplay: React.FC<NewsDisplayProps> = ({ news = [], destination = "you
                           <img
                             src={imageUrl}
                             alt={item.title}
-                            className="w-full h-48 md:h-full object-cover"
+                            className="w-full h-48 md:h-full object-fit"
                             loading="lazy"
                             onError={() => handleImageError(index)}
                           />
