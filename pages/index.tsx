@@ -541,12 +541,14 @@ import LandingPage from "./Component/Landing";
 
 import React from 'react'
 import LoginPage from './Component/Login'
+// import Subscribe from './Component/Subscribe'
 
 const index = () => {
   return (
-    <div>
-      <LandingPage />
-    </div>
+    <>
+       <LandingPage /> 
+       {/* <Subscribe /> */}
+    </>
   )
 }
 
