@@ -11,6 +11,9 @@ import { IoChatbubblesOutline, IoThermometer } from 'react-icons/io5';
 import { WiHumidity, WiStrongWind } from 'react-icons/wi';
 import axios from 'axios';
 
+const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU';
+
+
 interface PlanDisplayProps {
   plan: string;
   sectionVariants: any;
@@ -38,6 +41,7 @@ interface WeatherData {
   forecast: Array<{
     date: string;
     day: {
+      icon: any;
       maxtemp_c: number;
       mintemp_c: number;
       condition: string;
@@ -48,68 +52,68 @@ interface WeatherData {
 
 // This is a mock function for demonstration purposes
 // In a real application, you would implement actual scraping logic
-const scrapeWeatherData = async (destination: string): Promise<WeatherData | null> => {
-  try {
-    // For demo purposes, let's say we're scraping data from weather.com or similar
-    // We'll simulate the scraping process with a proxy service
+// const scrapeWeatherData = async (destination: string): Promise<WeatherData | null> => {
+//   try {
+//     // For demo purposes, let's say we're scraping data from weather.com or similar
+//     // We'll simulate the scraping process with a proxy service
     
-    // In a real application, you might use a proxy service like this:
-    // const response = await axios.get('https://api.allorigins.win/raw?url=' + 
-    //   encodeURIComponent(`https://weather.com/weather/tenday/l/${encodeURIComponent(destination)}`));
+//     // In a real application, you might use a proxy service like this:
+//     // const response = await axios.get('https://api.allorigins.win/raw?url=' + 
+//     //   encodeURIComponent(`https://weather.com/weather/tenday/l/${encodeURIComponent(destination)}`));
     
-    // Since we can't actually make the request in this demo, we'll simulate the response
-    // This would be replaced with actual scraping logic in production
+//     // Since we can't actually make the request in this demo, we'll simulate the response
+//     // This would be replaced with actual scraping logic in production
     
-    // Simulate different weather conditions based on the destination name's length
-    const seed = destination.length;
-    const today = new Date();
+//     // Simulate different weather conditions based on the destination name's length
+//     const seed = destination.length;
+//     const today = new Date();
     
-    // Generate random but consistent weather data
-    const forecast = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() + i);
+//     // Generate random but consistent weather data
+//     const forecast = Array.from({ length: 7 }, (_, i) => {
+//       const date = new Date(today);
+//       date.setDate(date.getDate() + i);
       
-      // Create some variety based on the day and destination
-      const tempVariation = (seed + i) % 10;
-      const rainChance = ((seed * i) % 100);
+//       // Create some variety based on the day and destination
+//       const tempVariation = (seed + i) % 10;
+//       const rainChance = ((seed * i) % 100);
       
-      const conditions = [
-        "Sunny", "Partly Cloudy", "Cloudy", "Light Rain", 
-        "Rain", "Thunderstorm", "Clear", "Overcast"
-      ];
+//       const conditions = [
+//         "Sunny", "Partly Cloudy", "Cloudy", "Light Rain", 
+//         "Rain", "Thunderstorm", "Clear", "Overcast"
+//       ];
       
-      // Select a condition based on seed and day
-      const conditionIndex = (seed + i) % conditions.length;
+//       // Select a condition based on seed and day
+//       const conditionIndex = (seed + i) % conditions.length;
       
-      return {
-        date: date.toISOString().split('T')[0],
-        day: {
-          maxtemp_c: 20 + tempVariation,
-          mintemp_c: 10 + (tempVariation / 2),
-          condition: conditions[conditionIndex],
-          daily_chance_of_rain: rainChance
-        }
-      };
-    });
+//       return {
+//         date: date.toISOString().split('T')[0],
+//         day: {
+//           maxtemp_c: 20 + tempVariation,
+//           mintemp_c: 10 + (tempVariation / 2),
+//           condition: conditions[conditionIndex],
+//           daily_chance_of_rain: rainChance
+//         }
+//       };
+//     });
     
-    // Current conditions
-    const current = {
-      temp_c: 15 + (seed % 15),
-      condition: forecast[0].day.condition,
-      humidity: 40 + (seed % 40),
-      wind_kph: 5 + (seed % 20)
-    };
+//     // Current conditions
+//     const current = {
+//       temp_c: 15 + (seed % 15),
+//       condition: forecast[0].day.condition,
+//       humidity: 40 + (seed % 40),
+//       wind_kph: 5 + (seed % 20)
+//     };
     
-    return {
-      current,
-      forecast
-    };
+//     return {
+//       current,
+//       forecast
+//     };
         
-  } catch (error) {
-    console.error("Error scraping weather data:", error);
-    return null;
-  }
-};
+//   } catch (error) {
+//     console.error("Error scraping weather data:", error);
+//     return null;
+//   }
+// };
 
 // In a real implementation, you would implement your actual web scraping here
 // For different destination types
@@ -131,7 +135,7 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [showWeather, setShowWeather] = useState<boolean>(true);
   const contentRef = useRef<HTMLDivElement>(null);
-
+  const [timeToVisit, setTimeToVisit] = useState('');
   // Sections extracted from plan
   const [sections, setSections] = useState<{ title: string; id: string }[]>([]);
   
@@ -158,6 +162,32 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
     }
   }, [plan]);
 
+
+  const bestTimeToVisit = async () => {
+
+    let travelPlanPrompt = `Tell me the best time to visit ${destination} and also mention the weather optimal weather statistics(e.g temp, month, humidity) in which one can visit that place. It should not cross more that ttwo lines`
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        contents: [
+          {
+            parts: [
+              {
+                text: travelPlanPrompt
+              }
+            ]
+          }
+        ]
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+
+    setTimeToVisit(response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.')
+  }
   // Fetch feedbacks from Firestore
   useEffect(() => {
     const fetchFeedbacks = async () => {
@@ -208,30 +238,10 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
         setLoading(false);
       }
     };
-    
-    const fetchWeather = async () => {
-      setWeatherLoading(true);
-      setWeatherError(null);
-      
-      try {
-        // Using our scraping function instead of an API
-        const data = await scrapeWeatherData(destination);
-        if (data) {
-          setWeatherData(data);
-        } else {
-          setWeatherError("Unable to fetch weather data for this location.");
-        }
-      } catch (err) {
-        console.error("Error fetching weather:", err);
-        setWeatherError("Failed to load weather data.");
-      } finally {
-        setWeatherLoading(false);
-      }
-    };
 
     if (destination) {
       fetchFeedbacks();
-      fetchWeather();
+      getWeather(destination);
     }
   }, [destination]);
 
@@ -408,7 +418,7 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
       const rainChance = day.day.daily_chance_of_rain || 0;
       
       return (
-        condition.includes('rain') || 
+        condition.includes('Rain') || 
         condition.includes('storm') || 
         condition.includes('snow') ||
         rainChance > 60
@@ -448,6 +458,58 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
     }
   };
 
+
+  const getCardValue = (cards: any[], label: string): number | undefined => {
+    const card = cards.find(c => c.type.toLowerCase() === label.toLowerCase())
+    return card ? parseFloat(card.title) : undefined
+  }
+  
+  const formatDateForISO = (dateStr: string): string => {
+    const [dd, mm, yy] = dateStr.split('/')
+    return `20${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+  }
+  
+
+  const getWeather = async (location: string) => {
+    try {
+      const res = await fetch(`/api/fetchWeather?location=${location}`)
+      const data = await res.json()
+      console.log("weather data is ",data);
+      
+      if (res.ok) {
+        const forecast = data.weeklyForecast.map((item: any) => ({
+          date: formatDateForISO(item.date),
+          day: {
+            maxtemp_c: parseFloat(item.temp.replace('°', '')),
+            mintemp_c: parseFloat(data.current.min),
+            condition: data.current.weather,
+            icon:item.icon,
+          }
+        }))
+  
+        const current = {
+          temp_c: parseFloat(data.current.temp),
+          condition: data.current.weather,
+          humidity: getCardValue(data.cards, 'Humidity'),
+          wind_kph: getCardValue(data.cards, 'Speed'),
+        }
+  
+        setWeatherData({ current, forecast })
+        setWeatherError(null)
+      } else {
+        setWeatherError(data.error || 'Something went wrong')
+      }
+  
+    } catch (err) {
+      setWeatherError('Failed to fetch weather data')
+      console.error(err)
+    } finally {
+      setWeatherLoading(false)
+    }
+  }
+  
+
+  
   // Animation variants
   const dialogVariants = {
     hidden: { opacity: 0, y: 50 },
@@ -604,7 +666,13 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
                       <div className="flex flex-col md:flex-row justify-between">
                         <div className="flex items-center">
                           <div className="flex items-center justify-center bg-white dark:bg-gray-800 rounded-full p-2 w-12 h-12 shadow-sm mr-4">
-                            {getWeatherIcon(weatherData.current.condition)}
+                          <img
+                                src={weatherData.forecast?.[0]?.day?.icon}
+                                alt={weatherData.forecast?.[0]?.day?.condition || 'Weather icon'}
+                                className="w-8 h-8 object-contain"
+                                loading="lazy"
+                              />
+
                           </div>
                           <div>
                             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Current Weather in {destination}</h3>
@@ -612,7 +680,7 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
                               <span className="mr-2">{weatherData.current.condition}</span>
                               <span className="mx-2 text-gray-400">•</span>
                               <IoThermometer className="mr-1 text-red-500" />
-                              <span>{weatherData.current.temp_c.toFixed(1)}°C</span>
+                              <span>{weatherData.current.temp_c}°C</span>
                               
                               {weatherData.current.humidity && (
                                 <>
@@ -658,8 +726,18 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
                                 {getFormattedDate(day.date)}
                               </p>
                               <div className="my-1 flex justify-center">
-                                {getWeatherIcon(day.day.condition)}
+                                {day.day.icon ? (
+                                  <img
+                                    src={day.day.icon}
+                                    alt={day.day.condition || 'Weather icon'}
+                                    className="w-8 h-8 object-contain"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  getWeatherIcon(day.day.condition)
+                                )}
                               </div>
+
                               <div className="flex justify-between text-xs mt-1">
                                 <span className="text-blue-600 dark:text-blue-400">{day.day.mintemp_c.toFixed(0)}°</span>
                                 <span className="text-red-600 dark:text-red-400">{day.day.maxtemp_c.toFixed(0)}°</span>
@@ -676,23 +754,39 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sectionVariants, destin
                       </div>
                       
                       {/* Travel recommendation */}
-                      {travelRecommendation && (
-                        <div className={`mt-4 p-3 rounded-lg border ${travelRecommendation.className}`}>
+                      {/* Best Time to Visit Section */}
+                      {timeToVisit !== '' ? (
+                        <div className="mt-4 p-4 rounded-xl border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/30 backdrop-blur-md shadow-sm transition-all">
                           <div className="flex items-start">
-                            <div className="mr-3 mt-1">
-                              {travelRecommendation.icon}
+                            <div className="mr-3 mt-1 text-green-600 dark:text-green-300 text-xl">
+                              🌿
                             </div>
                             <div>
-                              <h4 className="font-semibold text-gray-900 dark:text-white">
-                                {travelRecommendation.recommendation}
+                              <h4 className="font-semibold text-green-800 dark:text-green-200 mb-1">
+                                Best Time to Visit {destination}
                               </h4>
-                              <p className="text-sm text-gray-700 dark:text-gray-300">
-                                {travelRecommendation.message}
+                              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {timeToVisit}
                               </p>
                             </div>
                           </div>
                         </div>
+                      ) : (
+                        <div onClick={bestTimeToVisit} className="relative mt-4">
+                          {/* Green blurred background */}
+                          <div className="absolute inset-0 rounded-xl bg-green-100/60 dark:bg-green-800/30 backdrop-blur-md z-0" />
+                      
+                          <div className="relative z-10 p-6 border border-green-200 dark:border-green-700 rounded-xl flex flex-col items-center justify-center text-center bg-white/60 dark:bg-gray-900/30 shadow-md">
+                            <p className="font-semibold text-green-700 dark:text-green-300 text-lg mb-2">
+                              Click to fetch the best time to visit <span className="font-bold">{destination}</span>
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                              Get seasonal recommendations for a great experience!
+                            </p>
+                          </div>
+                        </div>
                       )}
+
                     </div>
                   </div>
                 ) : null}

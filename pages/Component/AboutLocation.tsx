@@ -269,11 +269,11 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
           )}
         </div>
 
-        {/* Quick info cards */}
+        Quick info cards
         <div className="px-6 -mt-6 relative z-10">
           <div className="flex flex-wrap gap-4 justify-center">
             {/* Weather card */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-4 flex items-center w-full md:w-auto md:flex-1">
+            {/* <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-4 flex items-center w-full md:w-auto md:flex-1">
               <div className="bg-blue-100 dark:bg-blue-900 rounded-full p-3 mr-3">
                 <span className="text-xl">{getWeatherIcon()}</span>
               </div>
@@ -287,10 +287,10 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
                   <div className="h-6 w-24 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
                 )}
               </div>
-            </div>
+            </div> */}
             
             {/* Best time to visit */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-4 flex items-center w-full md:w-auto md:flex-1">
+            {/* <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-4 flex items-center w-full md:w-auto md:flex-1">
               <div className="bg-green-100 dark:bg-green-900 rounded-full p-3 mr-3">
                 <FaRegCalendarAlt className="text-green-600 dark:text-green-400" />
               </div>
@@ -300,10 +300,10 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
                   Apr - Oct
                 </p>
               </div>
-            </div>
+            </div> */}
             
             {/* Currency */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-4 flex items-center w-full md:w-auto md:flex-1">
+            {/* <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-4 flex items-center w-full md:w-auto md:flex-1">
               <div className="bg-yellow-100 dark:bg-yellow-900 rounded-full p-3 mr-3">
                 <FaExchangeAlt className="text-yellow-600 dark:text-yellow-400" />
               </div>
@@ -317,7 +317,7 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
                   <div className="h-6 w-24 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
                 )}
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
         

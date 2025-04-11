@@ -664,3 +664,17 @@
 // function setShowPaymentConfirmation(arg0: boolean) {
 //   throw new Error('Function not implemented.');
 // }
+
+
+
+import React from 'react'
+
+const Subscribe = () => {
+  return (
+    <div>
+      
+    </div>
+  )
+}
+
+export default Subscribe

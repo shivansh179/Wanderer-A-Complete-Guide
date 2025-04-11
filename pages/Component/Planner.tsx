@@ -289,6 +289,10 @@ const Index = () => {
     }
   };
 
+
+ 
+  
+
   // Load previous trip
   const loadPreviousTrip = async (tripId: string) => {
     try {
