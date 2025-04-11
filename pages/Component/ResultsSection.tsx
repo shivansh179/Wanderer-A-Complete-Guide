@@ -15,6 +15,7 @@ interface ResultsSectionProps {
     activeSection: 'plan' | 'about' | 'photos' | 'news';
     setActiveSection: (section: 'plan' | 'about' | 'photos' | 'news') => void;
     planGenerated: boolean;
+    loadingNews: boolean;
     news: any[]; // Replace `any` with the actual type of your news data
     locationImage: string;
     locationBio: string;
@@ -23,12 +24,19 @@ interface ResultsSectionProps {
     imageLoading: boolean;
     hasMore: boolean;
     loadMore: () => void;
+    videoRefs: React.MutableRefObject<{ [key: string]: HTMLVideoElement | null }>;
     fetchNewsForDestination: (destination: string) => Promise<void>;
     destination: string;
     videos: any[];    previousValue:string;
     fetchVideos: () => Promise<void>;
     activeMediaType: 'photos' | 'videos';
     switchMediaType: (type: 'photos' | 'videos') => void;
+    videoPlaying: number | null;
+handleVideoToggle: (videoId: number) => void;
+feedbackSubmitted: boolean;
+submitFeedback: (feedbackData: any) => Promise<boolean>;
+currentTripId: string;
+
 }
 
 const ResultsSection: React.FC<ResultsSectionProps> = ({

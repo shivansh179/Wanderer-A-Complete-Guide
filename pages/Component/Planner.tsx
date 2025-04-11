@@ -1,5 +1,4 @@
 "use client"
-"use client"
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '@/pages/Component/Navbar';
@@ -14,6 +13,12 @@ import { collection, getFirestore, setDoc, updateDoc, arrayUnion, deleteDoc } fr
 import { doc, getDoc } from 'firebase/firestore';
 import router from 'next/router';
 import { FaSpinner, FaLock, FaCheckCircle } from 'react-icons/fa';
+// --- Toastify Imports ---
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css'; // Import CSS
+
+
+ 
 
 const Index = () => {
   const [user, setUser] = useState<any>(null);
@@ -23,9 +28,9 @@ const Index = () => {
   const [days, setDays] = useState('');
   const [budget, setBudget] = useState('');
   const [peopleCount, setPeopleCount] = useState('');
-  const [ladiesCount, setLadiesCount] = useState('');
-  const [elderlyCount, setElderlyCount] = useState('');
-  const [childrenCount, setChildrenCount] = useState('');
+  const [ladiesCount, setLadiesCount] = useState(''); // Note: Consider removing if only using family counts
+  const [elderlyCount, setElderlyCount] = useState(''); // Note: Consider removing if only using family counts
+  const [childrenCount, setChildrenCount] = useState(''); // Note: Consider removing if only using family counts
   const [images, setImages] = useState<Image[]>([]);
   const [imagePower, setImagePower] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
@@ -59,14 +64,20 @@ const Index = () => {
   const [modalAnimating, setModalAnimating] = useState(false);
   const [planGenerationSuccess, setPlanGenerationSuccess] = useState(false);
   const [currentTripId, setCurrentTripId] = useState('');
-  
-  const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU';
-  const PEXELS_API_KEY = '2wBg5SOXdnIFQApqDr5zTPq8MjvJGCcmXtIa3orVKwYe94fRNfZzuSwW';
+
+  // IMPORTANT: Store API keys securely, preferably in environment variables
+  // For demonstration purposes, they are here. Replace with process.env.REACT_APP_GEMINI_API_KEY etc.
+  const GEMINI_API_KEY = 'AIzaSyCLdUAFNtFROQJ19RYrBoIcoddNHk4-PIU'; // Your primary key
+  const FALLBACK_GEMINI_API_KEY = 'AIzaSyCIMumNTzri1bstzISZ21oEjgg9qYqiY9k'; // Your fallback key
+  const PEXELS_API_KEY = '2wBg5SOXdnIFQApqDr5zTPq8MjvJGCcmXtIa3orVKwYe94fRNfZzuSwW'; // Your Pexels key
+
   const db = getFirestore();
 
-  // Fetch user details from Firestore
+  // --- Firestore Functions (Mostly Unchanged) ---
+
   const fetchUserDetailsFromFirestore = async (userEmail: string) => {
-    const userDocRef = doc(db, 'users', userEmail);
+    // ... (keep existing implementation)
+     const userDocRef = doc(db, 'users', userEmail);
     const docSnapshot = await getDoc(userDocRef);
 
     if (docSnapshot.exists()) {
@@ -77,133 +88,64 @@ const Index = () => {
     }
   };
 
-  // Increment plan generation count
   const incrementPlanGenerationCount = async (userEmail: string) => {
+    // ... (keep existing implementation)
     const userDocRef = doc(db, 'users', userEmail);
-    
+
     try {
       const userDoc = await getDoc(userDocRef);
-      
+
       if (userDoc.exists()) {
         const currentCount = userDoc.data()?.planGenerationCount || 0;
         await updateDoc(userDocRef, {
           planGenerationCount: currentCount + 1,
         });
       } else {
-        await updateDoc(userDocRef, {
+        // If user doc doesn't exist, create it with count 1
+         await setDoc(userDocRef, {
           planGenerationCount: 1,
-        });
+          // Add other default fields if necessary upon first plan generation
+        }, { merge: true }); // Use merge: true to avoid overwriting if created concurrently
       }
     } catch (error) {
       console.error('Error updating plan generation count:', error);
     }
   };
 
-  // Check user authentication and plan generation count
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
-      if (authenticatedUser && authenticatedUser.email) {
-        const userDocRef = doc(db, 'users', authenticatedUser.email);
-        const userDoc = await getDoc(userDocRef);
-        
-        let planGenerationCount = 0;
-        if (userDoc.exists()) {
-          planGenerationCount = userDoc.data()?.planGenerationCount || 0;
-        }
-
-        if (planGenerationCount <= 3 || authenticatedUser.email === 'prasantshukla89@gmail.com') {
-          setUser(authenticatedUser);
-        } else {
-          setShowModal(true);
-          setLoading(false);
-          return;
-        }
-      } else {
-        setUser(null);
-      }
-    });
-    
-    return unsubscribe;
-  }, []);
-
-  // Get user trips
-  const getUserTrips = async () => {
-    if (!user || !user.email) {
-      console.error('User not authenticated');
-      return [];
-    }
-    
-    try {
-      const userDocRef = doc(db, 'users', user.email);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists() && userDoc.data().trips) {
-        // Sort by creation date (newest first)
-        return [...userDoc.data().trips].sort((a: any, b: any) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('Error fetching user trips:', error);
-      return [];
-    }
-  };
-
-  // Get trips by feedback status
-  const getTripsByFeedbackStatus = async (hasFeedback: boolean) => {
-    try {
-      const allTrips = await getUserTrips();
-      return allTrips.filter((trip: any) => trip.feedbackSubmitted === hasFeedback);
-    } catch (error) {
-      console.error('Error filtering trips by feedback status:', error);
-      return [];
-    }
-  };
-
-  // Save trip to Firebase
   const saveTrip = async (tripData: any, fullPlan: string) => {
+    // ... (keep existing implementation)
     if (!user || !user.email) {
       console.error('User not authenticated');
       return null;
     }
-    
+
     try {
-      // Generate a unique trip ID
       const tripId = new Date().getTime().toString();
-      
-      // Create trip object without the full plan
       const tripToSave = {
         id: tripId,
         ...tripData,
-        planSummary: fullPlan.substring(0, 200) + '...', // Just a preview
+        planSummary: fullPlan.substring(0, 200) + '...',
         hasPlan: true,
         feedbackSubmitted: false,
         createdAt: new Date().toISOString()
       };
-      
-      // Save to user's trips array
+
       const userDocRef = doc(db, 'users', user.email);
       const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        if (userDoc.data().trips) {
-          await updateDoc(userDocRef, {
-            trips: arrayUnion(tripToSave)
-          });
+
+       if (userDoc.exists()) {
+            // Use arrayUnion to add the new trip without overwriting existing ones
+            await updateDoc(userDocRef, {
+                trips: arrayUnion(tripToSave)
+            });
         } else {
-          await updateDoc(userDocRef, {
-            trips: [tripToSave]
-          });
+            // If the document doesn't exist, create it with the trips array
+            await setDoc(userDocRef, {
+                trips: [tripToSave]
+                // Add other initial user fields if necessary
+            });
         }
-      } else {
-        await setDoc(userDocRef, {
-          trips: [tripToSave]
-        });
-      }
-      
-      // Save full plan separately
+
       const planDocRef = doc(db, 'plans', tripId);
       await setDoc(planDocRef, {
         userId: user.email,
@@ -211,7 +153,7 @@ const Index = () => {
         fullPlan,
         createdAt: new Date().toISOString()
       });
-      
+
       setCurrentTripId(tripId);
       return tripId;
     } catch (error) {
@@ -220,17 +162,17 @@ const Index = () => {
     }
   };
 
-  // Fetch full plan from separate collection
   const fetchFullPlan = async (tripId: string) => {
+    // ... (keep existing implementation)
     if (!tripId) {
       console.error('No trip ID provided');
       return null;
     }
-    
+
     try {
       const planDocRef = doc(db, 'plans', tripId);
       const planDoc = await getDoc(planDocRef);
-      
+
       if (planDoc.exists()) {
         return planDoc.data().fullPlan;
       } else {
@@ -243,566 +185,875 @@ const Index = () => {
     }
   };
 
-  // Update feedback status for a trip
-  const updateTripFeedback = async (tripId: string, feedbackData: any) => {
-    if (!user || !user.email || !tripId) {
-      console.error('Missing user or trip ID');
-      return false;
-    }
-    
-    try {
-      const userDocRef = doc(db, 'users', user.email);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists() && userDoc.data().trips) {
-        const trips = userDoc.data().trips;
-        const updatedTrips = trips.map((trip: any) => {
-          if (trip.id === tripId) {
-            return {
-              ...trip,
-              feedbackSubmitted: true,
-              feedbackData
-            };
+   const getUserTrips = async () => {
+        if (!user || !user.email) {
+            console.error('User not authenticated');
+            return [];
+        }
+
+        try {
+            const userDocRef = doc(db, 'users', user.email);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists() && userDoc.data().trips) {
+                // Ensure trips is an array before sorting
+                const tripsArray = Array.isArray(userDoc.data().trips) ? userDoc.data().trips : [];
+                // Sort by creation date (newest first)
+                return [...tripsArray].sort((a: any, b: any) =>
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Error fetching user trips:', error);
+            return [];
+        }
+    };
+
+    const getTripsByFeedbackStatus = async (hasFeedback: boolean) => {
+        try {
+            const allTrips = await getUserTrips();
+            // Ensure trip.feedbackSubmitted exists before comparing
+            return allTrips.filter((trip: any) => !!trip.feedbackSubmitted === hasFeedback);
+        } catch (error) {
+            console.error('Error filtering trips by feedback status:', error);
+            return [];
+        }
+    };
+
+
+    const updateTripFeedback = async (tripId: string, feedbackData: any) => {
+        if (!user || !user.email || !tripId) {
+            console.error('Missing user or trip ID');
+            return false;
+        }
+
+        try {
+            const userDocRef = doc(db, 'users', user.email);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists() && userDoc.data().trips) {
+                const trips = userDoc.data().trips;
+                const updatedTrips = trips.map((trip: any) => {
+                    if (trip.id === tripId) {
+                        return {
+                            ...trip,
+                            feedbackSubmitted: true,
+                            feedbackData // Store feedback data directly if needed, or just the status
+                        };
+                    }
+                    return trip;
+                });
+
+                await updateDoc(userDocRef, { trips: updatedTrips });
+
+                // Optionally save feedback separately if detailed feedback needs querying
+                const feedbackDocRef = doc(db, 'feedback', tripId);
+                await setDoc(feedbackDocRef, {
+                    userId: user.email,
+                    tripId,
+                    ...feedbackData,
+                    createdAt: new Date().toISOString()
+                });
+
+                setFeedbackSubmitted(true); // Update local state
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Error updating feedback:', error);
+            return false;
+        }
+    };
+
+
+    const deleteTrip = async (tripId: string) => {
+        if (!user || !user.email) return false;
+
+        try {
+            const userDocRef = doc(db, 'users', user.email);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists() && userDoc.data().trips) {
+                const updatedTrips = userDoc.data().trips.filter((trip: any) => trip.id !== tripId);
+                await updateDoc(userDocRef, { trips: updatedTrips });
+
+                // Delete the associated plan document
+                try {
+                    const planDocRef = doc(db, 'plans', tripId);
+                    await deleteDoc(planDocRef);
+                } catch (err) {
+                    console.warn('Could not delete plan document (might not exist or already deleted):', err);
+                }
+                 // Optionally delete feedback document too
+                try {
+                    const feedbackDocRef = doc(db, 'feedback', tripId);
+                    await deleteDoc(feedbackDocRef);
+                } catch (err) {
+                     console.warn('Could not delete feedback document (might not exist or already deleted):', err);
+                }
+
+
+                return true;
+            }
+
+            return false; // User document or trips array doesn't exist
+        } catch (error) {
+            console.error('Error deleting trip:', error);
+            return false;
+        }
+    };
+
+
+    const submitFeedback = async (feedbackData: any) => {
+        if (!currentTripId) {
+            console.error('No active trip selected for feedback');
+            toast.error("Cannot submit feedback: No trip is currently selected.");
+            return false;
+        }
+
+        const result = await updateTripFeedback(currentTripId, feedbackData);
+        if (result) {
+            toast.success("Feedback submitted successfully!");
+        } else {
+            toast.error("Failed to submit feedback. Please try again.");
+        }
+        return result;
+    };
+
+
+    const loadPreviousTrip = async (tripId: string) => {
+        setLoading(true); // Show loading indicator while loading
+        setError(null);
+        setPlan(''); // Clear current plan before loading
+        try {
+            const trips = await getUserTrips();
+            const selectedTrip = trips.find((trip: any) => trip.id === tripId);
+
+            if (!selectedTrip) {
+                console.error('Trip not found:', tripId);
+                setError('Selected trip could not be found.');
+                toast.error('Selected trip could not be found.');
+                setLoading(false);
+                return;
+            }
+
+            // Fetch the full plan first
+            const fullPlan = await fetchFullPlan(tripId);
+
+            if (!fullPlan) {
+                console.warn('Full plan details not available for trip:', tripId);
+                // Decide how to handle missing plan: Show error, allow regeneration?
+                // For now, set a placeholder and allow UI to render
+                setPlan('Plan details not available. You might need to regenerate this plan if needed.');
+                 toast.warn('Plan details not available for this trip.');
+            } else {
+                 setPlan(fullPlan);
+            }
+
+
+            // Set state based on the loaded trip
+            setStartLocation(selectedTrip.startLocation || '');
+            setDestination(selectedTrip.destination || '');
+            setDays(selectedTrip.days || '');
+            setBudget(selectedTrip.budget || '');
+            setPeopleCount(selectedTrip.peopleCount || '');
+            setTripForFamily(selectedTrip.tripForFamily || false);
+            setFamilyElderlyCount(selectedTrip.familyElderlyCount || '');
+            setFamilyLadiesCount(selectedTrip.familyLadiesCount || '');
+            setFamilyChildrenCount(selectedTrip.familyChildrenCount || '');
+            setFamilyPreferences(selectedTrip.familyPreferences || '');
+            setCurrentTripId(selectedTrip.id); // Set the current trip ID
+            setFeedbackSubmitted(selectedTrip.feedbackSubmitted || false); // Update feedback status
+            setPlanGenerated(true); // Mark plan as "generated" (loaded)
+
+            // Update UI related states
+            const currentDestination = selectedTrip.destination || '';
+            setImageFetchDestination(currentDestination);
+            setActiveSection('plan'); // Default to plan view
+            setPreviousValue(currentDestination); // For potential comparison later
+            setCurrentValue(currentDestination); // For potential comparison later
+            setLocation(currentDestination); // Used by ResultsSection
+
+            // Fetch associated data if destination exists
+            if (currentDestination) {
+                fetchAboutLocation(currentDestination);
+                fetchNewsForDestination(currentDestination);
+                // Reset and potentially fetch media if needed immediately
+                setImages([]);
+                setVideos([]);
+                setNextPageUrl('');
+                setHasMore(true);
+                 // Decide if you want to auto-load photos/videos here or wait for user interaction
+                 // Example: Trigger photo fetch if photos tab is active by default
+                // if (activeSection === 'photos') {
+                //    imageFetcher(currentDestination);
+                // }
+            } else {
+                // Handle case where destination might be missing in old data
+                console.warn("Loaded trip is missing destination information.");
+                 setError("Loaded trip is missing destination information.");
+                 toast.warn("Loaded trip data is incomplete (missing destination).");
+            }
+
+
+        } catch (error) {
+            console.error('Error loading previous trip:', error);
+            setError('Failed to load the selected trip. Please try again.');
+             toast.error('Failed to load the selected trip.');
+        } finally {
+            setLoading(false); // Hide loading indicator
+        }
+    };
+
+
+  // --- Auth State Change ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
+      if (authenticatedUser && authenticatedUser.email) {
+        const userDocRef = doc(db, 'users', authenticatedUser.email);
+        try {
+          const userDoc = await getDoc(userDocRef);
+          let planGenerationCount = 0;
+          if (userDoc.exists()) {
+            planGenerationCount = userDoc.data()?.planGenerationCount || 0;
           }
-          return trip;
-        });
-        
-        await updateDoc(userDocRef, { trips: updatedTrips });
-        
-        // Save feedback separately if needed
-        const feedbackDocRef = doc(db, 'feedback', tripId);
-        await setDoc(feedbackDocRef, {
-          userId: user.email,
-          tripId,
-          ...feedbackData,
-          createdAt: new Date().toISOString()
-        });
-        
-        setFeedbackSubmitted(true);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error updating feedback:', error);
-      return false;
-    }
-  };
 
+          // Allow admins or users within the limit
+          if (planGenerationCount < 3 || authenticatedUser.email === 'prasantshukla89@gmail.com') {
+             setUser(authenticatedUser);
+             setShowModal(false); // Ensure modal is hidden if user becomes eligible
+          } else {
+            console.log(`User ${authenticatedUser.email} reached plan limit (${planGenerationCount}). Showing modal.`);
+            setUser(authenticatedUser); // Keep user object but show modal
+            setShowModal(true);
+            setLoading(false); // Stop any loading process
+          }
+        } catch (error) {
+           console.error("Error fetching user data during auth check:", error);
+            setUser(null); // Log out user if data fetch fails? Or handle differently?
+             toast.error("Could not verify your plan usage. Please try again.");
+        }
 
- 
-  
-
-  // Load previous trip
-  const loadPreviousTrip = async (tripId: string) => {
-    try {
-      // Get trip metadata
-      const trips = await getUserTrips();
-      const selectedTrip = trips.find((trip: any) => trip.id === tripId);
-      
-      if (!selectedTrip) {
-        console.error('Trip not found');
-        return;
-      }
-      
-      // Set trip details
-      setStartLocation(selectedTrip.startLocation);
-      setDestination(selectedTrip.destination);
-      setDays(selectedTrip.days);
-      setBudget(selectedTrip.budget);
-      setPeopleCount(selectedTrip.peopleCount);
-      setTripForFamily(selectedTrip.tripForFamily);
-      setFamilyElderlyCount(selectedTrip.familyElderlyCount || '');
-      setFamilyLadiesCount(selectedTrip.familyLadiesCount || '');
-      setFamilyChildrenCount(selectedTrip.familyChildrenCount || '');
-      setFamilyPreferences(selectedTrip.familyPreferences || '');
-      setCurrentTripId(selectedTrip.id);
-      setFeedbackSubmitted(selectedTrip.feedbackSubmitted);
-      setPlanGenerated(true);
-      
-      // Fetch the full plan from separate storage
-      const fullPlan = await fetchFullPlan(tripId);
-      if (fullPlan) {
-        setPlan(fullPlan);
       } else {
-        setPlan('Plan details not available. You may need to regenerate this plan.');
+        setUser(null);
+        setShowModal(false); // Hide modal if user logs out
       }
-      
-      // Update other state values
-      setImageFetchDestination(selectedTrip.destination);
-      setActiveSection('plan');
-      setPreviousValue(selectedTrip.destination);
-      setCurrentValue(selectedTrip.destination);
-      setLocation(selectedTrip.destination);
-      
-      // Fetch additional data
-      fetchAboutLocation(selectedTrip.destination);
-      fetchNewsForDestination(selectedTrip.destination);
-    } catch (error) {
-      console.error('Error loading trip:', error);
-    }
-  };
+    });
 
-  // Generate travel plan
+    return unsubscribe; // Cleanup subscription on unmount
+  }, [db]); // Add db dependency
+
+
+  // --- Plan Generation ---
   const planFetcher = async () => {
     setPlan('');
     setLoading(true);
     setError(null);
     setPlanGenerationSuccess(false);
-    setPlanGenerated(true);
-  
-    if (!user) {
-      setError('User not authenticated.');
+    setPlanGenerated(false); // Reset generated state
+
+    if (!user || !user.email) {
+      setError('User not authenticated. Please log in.');
+      toast.error('User not authenticated. Please log in.');
       setLoading(false);
       return;
     }
-  
+
+    let userDetails: any;
+    let planGenerationCount = 0;
+
     try {
-      // Fetch user details
-      const userDocRef = doc(db, 'users', user.email);
-      const userDoc = await getDoc(userDocRef);
-  
-      if (!userDoc.exists()) {
-        setError('Could not fetch user details. Please make sure you are logged in.');
-        setLoading(false);
-        return;
-      }
-  
-      const userDetails = userDoc.data();
-      const { name, religion, favoritePlaces, believerOfGod, age, planGenerationCount = 0 } = userDetails;
-  
-      // Check plan generation limit
+      // Fetch user details and count *before* proceeding
+       const userDocRef = doc(db, 'users', user.email);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+            // Handle case where user doc might not exist yet (e.g., first time user just signed up)
+            // Option 1: Create a basic doc here
+            // Option 2: Rely on profile completion step elsewhere
+             console.warn(`User document for ${user.email} not found. Creating or using defaults.`);
+             // Create a default structure if needed, or ensure profile completion redirects
+             // For now, assume defaults or that required fields are handled elsewhere
+             userDetails = { name: user.displayName || "User", /* other defaults */ };
+             // If creating here: await setDoc(userDocRef, { email: user.email, planGenerationCount: 0, createdAt: new Date().toISOString() });
+        } else {
+            userDetails = userDoc.data();
+            planGenerationCount = userDetails?.planGenerationCount || 0;
+        }
+
+
+      // Check plan generation limit AGAIN (important safety check)
       if (planGenerationCount >= 3 && user.email !== 'prasantshukla89@gmail.com') {
         setShowModal(true);
         setLoading(false);
         return;
       }
-  
-      // Fetch about the location
-      fetchAboutLocation(destination);
-  
+
+      // Fetch about location concurrently (optional optimization)
+       fetchAboutLocation(destination); // Start fetching about info
+
       const userSpecificDetails = `
-        Name: ${name}
-        Religion: ${religion}
-        Favorite Places: ${favoritePlaces}
-        Believer of God: ${believerOfGod ? 'Yes' : 'No'}
-        Age: ${age}
+        Name: ${userDetails?.name || user.displayName || 'N/A'}
+        Religion: ${userDetails?.religion || 'N/A'}
+        Favorite Places: ${userDetails?.favoritePlaces || 'N/A'}
+        Believer of God: ${userDetails?.believerOfGod ? 'Yes' : 'No'}
+        Age: ${userDetails?.age || 'N/A'}
       `;
-  
+
       let travelPlanPrompt = '';
-  
-      if (tripForFamily) {
-        travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for my family. 
-        They are ${peopleCount} people in total, with ${familyLadiesCount} ladies, ${familyElderlyCount} elders, and ${familyChildrenCount} children. 
-        Total budget is ${budget}. Please consider the following family preferences for travel to create a detailed itinerary: 
-        ${familyPreferences}
-        The itinerary should include family-friendly travel routes, must-visit places, activities, and an estimated budget breakdown. 
-        Additionally, if any members have special needs, include safety tips for elderly, ladies, and children.`;
-      } else {
-        travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for myself. 
-        I am traveling alone. My budget is ${budget}. Please consider the following personal details to create a detailed itinerary: 
-        ${userSpecificDetails}
-        The itinerary should include travel routes, must-visit places, activities, and an estimated budget breakdown.`;
-      }
-  
-      // Make API request to Gemini
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          contents: [
-            {
-              parts: [
-                {
-                  text: travelPlanPrompt
-                }
-              ]
-            }
-          ]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-  
-      const extractedPlan = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No plan generated.';
-      setPlan(extractedPlan);
-      setPlanGenerationSuccess(true);
-  
-      // Reset media states
-      setImages([]);
-      setNextPageUrl('');
-      setTotalResults(0);
-      setHasMore(true);
-      setVideos([]);
-      setActiveMediaType('photos');
-      setVideoPlaying(null);
-      videoRefs.current = {};
-  
-      // Update state values
-      setImageFetchDestination(destination);
-      setActiveSection('plan');
-      setPreviousValue(destination);
-      setCurrentValue(destination);
-      setLocation(destination);
-  
-      // Fetch news
-      if (destination === location) {
-        fetchNewsForDestination(location);
-      } else {
-        fetchNewsForDestination(destination);
-      }
-  
-      // Increment plan generation count
-      incrementPlanGenerationCount(user.email);
-  
-      // Create trip data object WITHOUT the full plan
-      const tripData = {
-        email: user.email,
-        name: userDetails.name,
-        startLocation,
-        destination,
-        days,
-        budget,
-        peopleCount,
-        tripForFamily,
-        familyElderlyCount: familyElderlyCount || '',
-        familyLadiesCount: familyLadiesCount || '',
-        familyChildrenCount: familyChildrenCount || '',
-        familyPreferences: familyPreferences || '',
-      };
-  
-      // Save the trip to Firestore (without full plan in trips array)
-      await saveTrip(tripData, extractedPlan);
-  
-    } catch (err: any) {
-      console.error('Error fetching the plan:', err);
-      setError(err.message || 'Failed to fetch the plan. Please try again.');
-      setPlan('');
-    } finally {
-      setLoading(false);
-    }
-  };
+      let fallBackPrompt = ''; // Define fallback prompt structure
 
-  // Delete a trip
-  const deleteTrip = async (tripId: string) => {
-    if (!user || !user.email) return false;
-    
-    try {
-      // First, get all user trips
-      const userDocRef = doc(db, 'users', user.email);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists() && userDoc.data().trips) {
-        // Filter out the trip to delete
-        const updatedTrips = userDoc.data().trips.filter((trip: any) => trip.id !== tripId);
-        
-        // Update the user document with the filtered trips
-        await updateDoc(userDocRef, { trips: updatedTrips });
-        
-        // Delete the full plan document
+        if (tripForFamily) {
+            travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for my family.
+            They are ${peopleCount} people in total, with ${familyLadiesCount || 0} ladies, ${familyElderlyCount || 0} elders, and ${familyChildrenCount || 0} children.
+            Total budget is ${budget}. Please consider the following family preferences for travel to create a detailed itinerary:
+            ${familyPreferences || 'No specific preferences mentioned.'}
+            The itinerary should include family-friendly travel routes, must-visit places, activities, and an estimated budget breakdown.
+            Additionally, if any members have special needs, include safety tips for elderly, ladies, and children. Focus on realistic options within the budget.`;
+
+            fallBackPrompt = `Generate a detailed ${days}-day family travel itinerary from ${startLocation} to ${destination}.
+            Budget: ${budget}.
+            Group: ${peopleCount} total (${familyLadiesCount || 0} ladies, ${familyElderlyCount || 0} elders, ${familyChildrenCount || 0} children).
+            Preferences: ${familyPreferences || 'General family-friendly activities'}.
+            Include: Daily plan (timing, activity, est. cost), transport, accommodation ideas (budget-friendly), safety tips. Use markdown format.`;
+        } else {
+             travelPlanPrompt = `I am planning a ${days}-day solo trip from ${startLocation} to ${destination}.
+             My budget is ${budget}. Please consider the following personal details to create a detailed itinerary:
+             ${userSpecificDetails}
+             The itinerary should include travel routes, must-visit places, activities suited to my profile, and an estimated budget breakdown. Focus on realistic options within the budget.`;
+
+              fallBackPrompt = `Generate a detailed ${days}-day solo travel itinerary from ${startLocation} to ${destination}.
+              Budget: ${budget}.
+              Traveler Profile: ${userSpecificDetails}.
+              Include: Daily plan (timing, activity, est. cost), transport, accommodation ideas (budget/solo-friendly), relevant activities based on profile. Use markdown format.`;
+        }
+
+
+      let extractedPlan = '';
+      let primaryModelFailed = false;
+
+      // --- Attempt 1: Primary Model (Gemini 1.5 Flash) ---
+      try {
+        console.log("Attempting plan generation with Primary Model...");
+        const response = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+          { contents: [{ parts: [{ text: travelPlanPrompt }] }] },
+          { headers: { 'Content-Type': 'application/json' }, timeout: 45000 } // Added timeout
+        );
+
+        // Check response carefully
+        extractedPlan = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!extractedPlan || extractedPlan.trim().length < 150) { // Stricter check
+          console.warn("Primary model response was insufficient.");
+          primaryModelFailed = true;
+        } else {
+          console.log("Primary model succeeded.");
+        }
+
+      } catch (err: any) {
+        console.error('Error calling Primary Model:', err.response?.data || err.message);
+        primaryModelFailed = true; // Mark primary as failed on error
+         // Optionally, show a less alarming message if it's just a timeout or rate limit
+         if (axios.isCancel(err)) {
+             console.log('Primary request canceled:', err.message);
+         } else if (err.code === 'ECONNABORTED') {
+             console.warn('Primary model request timed out.');
+         } else {
+            // Keep generic error for other issues
+            //setError('An issue occurred with the primary AI. Trying backup...'); // Set temporary error
+         }
+      }
+
+      // --- Attempt 2: Fallback Model (Gemma) ---
+      if (primaryModelFailed) {
+        setError(null); // Clear temporary error if any
+        console.warn("Switching to Fallback Model...");
+        toast.info("Primary AI is busy or unavailable. Trying backup...", { autoClose: 3500 }); // Show toast
+
         try {
-          const planDocRef = doc(db, 'plans', tripId);
-          await deleteDoc(planDocRef);
-        } catch (err) {
-          console.warn('Could not delete plan document (might not exist)');
+          const fallbackResponse = await axios.post(
+            // --- Ensure correct endpoint for Gemma 3 ---
+             // Check Google AI Studio or docs for the exact endpoint if this changes
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${FALLBACK_GEMINI_API_KEY}`, // Example using Gemma 2 27b
+            { contents: [{ parts: [{ text: fallBackPrompt }] }] }, // Using the simplified fallback prompt
+            { headers: { 'Content-Type': 'application/json' }, timeout: 60000 } // Longer timeout for potentially slower model
+          );
+
+          extractedPlan = fallbackResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+          if (!extractedPlan || extractedPlan.trim().length < 100) {
+            console.error("Fallback model also provided insufficient response.");
+            setError('Failed to generate plan using both primary and backup AI models. Please try again later.');
+            toast.error('Sorry, we could not generate the plan right now.');
+            setPlan(''); // Ensure plan is empty
+          } else {
+            console.log("Fallback model succeeded.");
+            setError(null); // Clear any previous errors if fallback works
+          }
+        } catch (fallbackErr: any) {
+          console.error('Error calling Fallback Model:', fallbackErr.response?.data || fallbackErr.message);
+          setError('Failed to generate plan. Both AI models encountered issues.');
+          toast.error('Sorry, plan generation failed completely.');
+          setPlan(''); // Ensure plan is empty
         }
-        
-        return true;
       }
-      
-      return false;
-    } catch (error) {
-      console.error('Error deleting trip:', error);
-      return false;
-    }
-  };
 
-  // Submit feedback for current trip
-  const submitFeedback = async (feedbackData: any) => {
-    if (!currentTripId) {
-      console.error('No active trip selected');
-      return false;
-    }
-    
-    const result = await updateTripFeedback(currentTripId, feedbackData);
-    return result;
-  };
+      // --- Post-Generation Steps (Only if a plan was generated) ---
+       if (extractedPlan && extractedPlan.trim().length >= 100) {
+         setPlan(extractedPlan);
+         setPlanGenerationSuccess(true); // Trigger success animation
+         setPlanGenerated(true); // Mark plan as generated for UI logic
 
-  // Fetch destination information
-  const fetchAboutLocation = async (location: string) => {
-    setLoading(true);
-    setError(null);
+         // Reset media states for the new destination
+         setImages([]);
+         setNextPageUrl('');
+         setTotalResults(0);
+         setHasMore(true);
+         setVideos([]);
+         setActiveMediaType('photos'); // Default to photos
+         setVideoPlaying(null);
+         videoRefs.current = {};
 
-    try {
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          contents: [
-            {
-              parts: [
-                {
-                  text: `I'm planning to travel to ${location}. Could you provide a detailed guide about the place, including:
+         // Update UI state values for the new plan
+         setImageFetchDestination(destination);
+         setActiveSection('plan'); // Show the plan first
+         setPreviousValue(currentValue); // Store old destination if needed
+         setCurrentValue(destination);
+         setLocation(destination); // Update location for other components
+         setLastDestination(destination); // Track last destination for media fetches
 
-                          1. Historical Background:
-                          * A brief history of the city/country, including significant events, cultural shifts, and famous historical landmarks.
-                          
-                          2. Cultural Insights:
-                          * Local customs, traditions, language, and important cultural aspects that would enrich my understanding and interaction with locals.
-                          
-                          3. Top Attractions:
-                          * The best places to visit, including popular tourist destinations, hidden gems, and landmarks that reflect the city's heritage and culture.
-                          * Details on must-see museums, historical sites, and natural wonders in and around the destination.
-                          
-                          4. Local Cuisine:
-                          * The best local foods and dishes to try, including any famous restaurants or markets known for authentic culinary experiences.
+         // Fetch news for the new destination
+         fetchNewsForDestination(destination);
 
-                          5. Unique Experiences:
-                          * Special activities or experiences unique to the destination (festivals, art scenes, adventure sports, etc.) that should not be missed.
-                          
-                          6. Practical Travel Tips:
-                          * Local transportation options, the best time to visit (season/weather), safety tips, and any important travel regulations or recommendations for tourists.
+         // Increment user's plan generation count in Firestore
+         await incrementPlanGenerationCount(user.email);
 
-                          7. Provide currency and weather forecast of that place. 
+          // Create trip data object (without full plan)
+         const tripData = {
+             email: user.email,
+             name: userDetails?.name || user.displayName || 'User',
+             startLocation,
+             destination,
+             days,
+             budget,
+             peopleCount,
+             tripForFamily,
+             familyElderlyCount: tripForFamily ? familyElderlyCount : '', // Only save family details if it's a family trip
+             familyLadiesCount: tripForFamily ? familyLadiesCount : '',
+             familyChildrenCount: tripForFamily ? familyChildrenCount : '',
+             familyPreferences: tripForFamily ? familyPreferences : '',
+             // userDetails: tripForFamily ? null : userSpecificDetails, // Decide if you want to store this snapshot
+         };
 
-                          8. Also Provide Links and docs of some youtube channels and docs one can go through about that place.
 
-                          9. Provide some hospitals, medical stores and emergency helpline numbers of the destination.
-                          
-                          Please tailor the information to a first-time traveler who wants to explore both the well-known and off-the-beaten-path experiences, focusing on immersive and educational travel.`
-                }
-              ]
+         // Save the trip metadata and link to the full plan
+         const savedTripId = await saveTrip(tripData, extractedPlan);
+          if (!savedTripId) {
+                console.error("Failed to save the generated trip to database.");
+                 toast.error("Plan generated, but failed to save the trip. Please try saving manually if needed.");
+                // Optionally, provide a way for the user to copy the plan text
             }
-          ]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
+
+       } else if (!error) {
+           // This case handles where both models returned insufficient content but didn't throw an error
+           setError('The AI could not generate a detailed plan with the provided information. Please try adjusting your request.');
+           toast.warn('Could not generate a detailed plan. Try being more specific or adjusting the parameters.');
+       }
+
+
+    } catch (err: any) {
+       // Catch any unexpected errors during the process (e.g., Firestore access)
+       console.error('Unhandled error during plan generation process:', err);
+       setError(err.message || 'An unexpected error occurred during plan generation.');
+        toast.error('An unexpected error occurred. Please try again.');
+       setPlan('');
+    } finally {
+      setLoading(false); // Ensure loading is always turned off
+    }
+  };
+
+
+  // --- Fetch About Location (with fallback) ---
+  const fetchAboutLocation = async (locationName: string) => {
+      // setLoading(true); // Consider a separate loading state for 'about' section if needed
+      setError(null); // Clear previous errors specific to location info
+      setLocationBio(''); // Clear previous bio
+
+      if (!locationName) {
+          console.warn("fetchAboutLocation called with empty location");
+          return;
+      }
+
+      const locationPrompt = `Provide a comprehensive guide for a traveler visiting ${locationName}. Include:
+      1.  Brief History & Significance
+      2.  Key Cultural Aspects (customs, language basics if applicable, etiquette)
+      3.  Top 5 Must-Visit Attractions (mix of popular and unique) with brief descriptions.
+      4.  Must-Try Local Cuisine (3-4 specific dishes or food types).
+      5.  Unique Local Experiences (e.g., festivals, markets, workshops).
+      6.  Practical Tips (best time to visit, basic safety, local transport overview).
+      7.  Currency used and general daily weather expectation (e.g., tropical, temperate, current season).
+      8.  Emergency contact info (general emergency number if known, maybe tourism police).
+      Format using markdown with clear headings.`;
+
+      let bioText = '';
+      let primaryFailed = false;
+
+      // Attempt 1: Primary Model
+       try {
+            console.log(`Fetching 'About' for ${locationName} with Primary Model...`);
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                { contents: [{ parts: [{ text: locationPrompt }] }] },
+                { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
+            );
+            bioText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+             if (!bioText || bioText.trim().length < 100) {
+                console.warn("Primary model 'About' response insufficient.");
+                primaryFailed = true;
+            } else {
+                 console.log("Primary model 'About' fetch succeeded.");
+            }
+        } catch (err: any) {
+             console.error(`Error fetching 'About' with Primary Model for ${locationName}:`, err.response?.data || err.message);
+            primaryFailed = true;
         }
-      );
 
-      setLocationBio(response.data.candidates[0].content.parts[0].text);
-    } catch (err: any) {
-      console.error('Error fetching location information:', err);
-      setError(err.message || 'Failed to fetch location information. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Fetch images
-  const imageFetcher = async (query: string) => {
-    setImageLoading(true);
-    try {
-      let imageResponse;
+      // Attempt 2: Fallback Model
+      if (primaryFailed) {
+          console.warn(`Switching to Fallback Model for 'About' ${locationName}...`);
+          toast.info(`Fetching location details using backup...`, { autoClose: 2000 });
 
-      if (nextPageUrl) {
-        imageResponse = await axios.get(nextPageUrl, {
-          headers: {
-            'Authorization': PEXELS_API_KEY,
+          try {
+               const fallbackResponse = await axios.post(
+                // Use the appropriate endpoint for your fallback model
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${FALLBACK_GEMINI_API_KEY}`,
+                { contents: [{ parts: [{ text: locationPrompt }] }] }, // Can reuse the same prompt
+                { headers: { 'Content-Type': 'application/json' }, timeout: 45000 }
+            );
+             bioText = fallbackResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (!bioText || bioText.trim().length < 100) {
+                 console.error("Fallback 'About' model also provided insufficient response.");
+                  setLocationBio('Could not retrieve detailed information about this location at the moment.');
+                 // Optionally set an error state if needed
+             } else {
+                  console.log("Fallback model 'About' fetch succeeded.");
+             }
+
+          } catch (fallbackErr: any) {
+              console.error(`Error fetching 'About' with Fallback Model for ${locationName}:`, fallbackErr.response?.data || fallbackErr.message);
+              setLocationBio('Error retrieving location information.'); // Set error message in bio
           }
-        });
-      } else {
-        imageResponse = await axios.get(`https://api.pexels.com/v1/search?query=${query}`, {
-          headers: {
-            'Authorization': PEXELS_API_KEY,
-          }
-        });
       }
 
-      if (imageResponse.data.photos && imageResponse.data.photos.length > 0) {
-        setImages((prevImages) => [...prevImages, ...imageResponse.data.photos]);
-      } else {
-        console.warn("No photos found in API response.");
-        setHasMore(false);
-      }
 
-      setNextPageUrl(imageResponse.data.next_page || '');
-      setTotalResults(imageResponse.data.total_results || 0);
-      setHasMore(!!imageResponse.data.next_page);
+      setLocationBio(bioText || 'No detailed information available.'); // Set final bio text
 
-    } catch (err: any) {
-      console.error('Error fetching images:', err);
-      setImages([]);
-      setNextPageUrl('');
-      setTotalResults(0);
-      setHasMore(false);
-    } finally {
-      setImageLoading(false);
-    }
+      // setLoading(false); // Turn off 'about' loading state if used
   };
 
-  // Fetch videos
+
+  // --- Media Fetching (Images/Videos - Unchanged logic, added safety) ---
+  const imageFetcher = async (query: string, isLoadMore = false) => {
+      if (!query) {
+          console.warn("Image fetcher called with empty query.");
+          return;
+      }
+      if (imageLoading && isLoadMore) return; // Prevent multiple simultaneous loads
+
+      console.log(`Fetching images for: ${query}, Load More: ${isLoadMore}`);
+      setImageLoading(true);
+      setError(null); // Clear media-specific errors
+
+      const url = isLoadMore && nextPageUrl
+          ? nextPageUrl
+          : `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=15`; // Fetch 15 initially
+
+      try {
+          const imageResponse = await axios.get(url, {
+              headers: { 'Authorization': PEXELS_API_KEY },
+              timeout: 15000 // Add timeout
+          });
+
+          if (imageResponse.data?.photos && imageResponse.data.photos.length > 0) {
+               setImages((prevImages) => isLoadMore ? [...prevImages, ...imageResponse.data.photos] : imageResponse.data.photos);
+               setNextPageUrl(imageResponse.data.next_page || '');
+               setTotalResults(imageResponse.data.total_results || 0);
+               setHasMore(!!imageResponse.data.next_page);
+          } else {
+               console.warn("No more photos found or empty response from Pexels.");
+               if (!isLoadMore) setImages([]); // Clear images if initial search yields nothing
+                setHasMore(false);
+               setNextPageUrl(''); // Ensure next page is cleared
+          }
+
+      } catch (err: any) {
+          console.error('Error fetching images:', err.response?.data || err.message);
+          setError('Failed to load images from Pexels.');
+          toast.error('Could not load images.');
+          // Don't clear existing images on error during load more
+          if (!isLoadMore) setImages([]);
+           setHasMore(false); // Stop further loading attempts on error
+          setNextPageUrl('');
+      } finally {
+          setImageLoading(false);
+      }
+  };
+
+
   const fetchVideos = async () => {
-    setImageLoading(true);
-    try {
-      const videoResponse = await axios.get(
-        `https://api.pexels.com/videos/search?query=${destination}&per_page=10`,
-        {
-          headers: {
-            'Authorization': PEXELS_API_KEY,
-          }
-        }
-      );
+     if (!destination) {
+          console.warn("fetchVideos called without a destination.");
+          return;
+      }
+      if (imageLoading) return; // Use same loading flag for simplicity
 
-      setVideos(videoResponse.data.videos || []);
-      setVideoPlaying(null);
-      
-      // Pause all videos
-      Object.values(videoRefs.current).forEach((videoRef) => {
-        if (videoRef) {
-          videoRef.pause();
-        }
-      });
-    } catch (err: any) {
-      console.error('Error fetching videos:', err);
-      setVideos([]);
-    } finally {
-      setImageLoading(false);
-    }
+      console.log(`Fetching videos for: ${destination}`);
+      setImageLoading(true); // Reuse imageLoading state
+      setError(null);
+      setVideos([]); // Clear previous videos
+
+      try {
+          const videoResponse = await axios.get(
+              `https://api.pexels.com/videos/search?query=${encodeURIComponent(destination)}&per_page=10`,
+              {
+                  headers: { 'Authorization': PEXELS_API_KEY },
+                  timeout: 20000 // Video search might take longer
+              }
+          );
+
+           const fetchedVideos = videoResponse.data?.videos || [];
+           setVideos(fetchedVideos);
+            if (fetchedVideos.length === 0) {
+                 console.warn("No videos found for this destination on Pexels.");
+                 // Optionally show a message in the UI instead of just empty
+             }
+
+          setVideoPlaying(null); // Reset playing state
+
+          // Pause any potentially playing videos from previous load
+          Object.values(videoRefs.current).forEach((videoRef) => {
+              if (videoRef && !videoRef.paused) {
+                  videoRef.pause();
+              }
+          });
+
+      } catch (err: any) {
+          console.error('Error fetching videos:', err.response?.data || err.message);
+          setError('Failed to load videos from Pexels.');
+          toast.error('Could not load videos.');
+          setVideos([]); // Ensure videos are cleared on error
+      } finally {
+          setImageLoading(false);
+      }
   };
 
-  // Fetch weather
-  const fetchWeatherForDestination = async (location: string) => {
-    setLoadingNews(true);
-    setError(null);
 
-    try {
-      const response = await axios.post('/api/weather', { location: location });
-    
-      if (response.status === 500) {
-        alert("Reminder: Try providing the complete name of the location for a better experience.");
-      }
+  // --- News & Weather Fetching (Using API Routes - Assumed to be working) ---
+  const fetchWeatherForDestination = async (locationName: string) => {
+       if (!locationName) return;
+       // setLoadingNews(true); // Use a specific loading state if needed
+       // setError(null);
 
-    } catch (error) {
-      setError('Failed to fetch weather.');
-      console.error('Error fetching weather:', error);
-    }
-  }
+       try {
+           console.log(`Fetching weather for ${locationName}...`);
+           const response = await axios.post('/api/weather', { location: locationName });
 
-  // Fetch news
-  const fetchNewsForDestination = async (location: string) => {
-    setLoadingNews(true);
-    setError(null);
+           // Assuming your API route returns weather data on success (200)
+           // and handles errors by returning non-200 status codes
+           if (response.status !== 200) {
+                console.warn(`Weather API responded with status ${response.status}:`, response.data);
+                 toast.warn(`Could not fetch precise weather for ${locationName}.`);
+                // Handle specific errors if your API provides them
+                if (response.status === 500 && response.data?.error?.includes("complete name")) {
+                   toast.info("Try providing a more specific location name for better weather results.", { autoClose: 5000 });
+               }
+           } else {
+               console.log("Weather data received (processing happens in API route or another component).");
+               // Process weather data if returned directly, otherwise assume UI updates elsewhere
+           }
 
-    try {
-      const response = await axios.post('/api/news', { location: location });
-      if (response.status === 200) {
-        setNews(response.data.articles);
-        fetchWeatherForDestination(destination);
-      } else {
-        setError('Failed to fetch news.');
-        console.error('Error fetching news:', response.status, response.data);
-        setNews([]);
-      }
-    
-    } catch (error) {
-      setError('Failed to fetch news.');
-      console.error('Error fetching news:', error);
-      setNews([]);
-    } finally {
-      setLoadingNews(false);
-    }
-  };
+       } catch (error: any) {
+           console.error('Error calling /api/weather:', error.response?.data || error.message);
+           //setError('Failed to fetch weather information.');
+           toast.error(`Failed to fetch weather for ${locationName}.`);
+       } finally {
+            // setLoadingNews(false);
+       }
+   };
 
-  // Toggle image power
-  const isActive = () => {
+
+   const fetchNewsForDestination = async (locationName: string) => {
+       if (!locationName) return;
+       setLoadingNews(true);
+       setError(null);
+       setNews([]); // Clear previous news
+
+       try {
+           console.log(`Fetching news for ${locationName}...`);
+           const response = await axios.post('/api/news', { location: locationName });
+
+           if (response.status === 200 && response.data?.articles) {
+               setNews(response.data.articles);
+                if (response.data.articles.length === 0) {
+                     console.log(`No news articles found for ${locationName}.`);
+                     // Optionally inform user, e.g., toast.info(`No recent news found for ${locationName}.`);
+                 }
+               // Call weather fetch after successful news fetch (if desired)
+                // Consider if these should be independent or sequential
+               // fetchWeatherForDestination(locationName);
+           } else {
+               console.error('Error fetching news - API response:', response.status, response.data);
+                setError('Failed to fetch news articles.');
+                toast.error(`Could not fetch news for ${locationName}.`);
+               setNews([]);
+           }
+
+       } catch (error: any) {
+           console.error('Error calling /api/news:', error.response?.data || error.message);
+           setError('Failed to fetch news information.');
+            toast.error(`Failed to fetch news for ${locationName}.`);
+           setNews([]);
+       } finally {
+           setLoadingNews(false);
+       }
+   };
+
+
+
+  // --- UI Handlers & Effects ---
+
+   const isActive = () => { // Consider renaming, e.g., toggleImagePower
     setImagePower(!imagePower);
-  };
+   };
 
-  // Load more images
+
   const loadMore = useCallback(() => {
-    if (!imageLoading && hasMore && nextPageUrl) {
-      imageFetcher(imageFetchDestination);
-    }
-  }, [imageLoading, hasMore, nextPageUrl, imageFetchDestination]);
+      // Only load more if 'photos' tab is active, there's a next page, and not already loading
+      if (activeSection === 'photos' && activeMediaType === 'photos' && !imageLoading && hasMore && nextPageUrl && imageFetchDestination) {
+          console.log("Loading more images...");
+          imageFetcher(imageFetchDestination, true); // Pass true for loadMore
+      } else if (activeSection === 'photos' && activeMediaType === 'photos' && !hasMore) {
+           console.log("No more images to load.");
+           // Optionally show a toast or message: toast("You've reached the end of the images.");
+       }
+  }, [activeSection, activeMediaType, imageLoading, hasMore, nextPageUrl, imageFetchDestination]); // Include all dependencies
 
-  // Initial image load and media type selection
-  useEffect(() => {
-    if (activeSection === 'photos' && planGenerated) {
-      if (activeMediaType === 'photos') {
-        setImages([]);
-        setNextPageUrl('');
-        imageFetcher(imageFetchDestination);
-      } else if (activeMediaType === 'videos') {
-        setVideos([]);
-        fetchVideos();
-      }
-      setLastDestination(destination);
-    }
-  }, [activeSection, activeMediaType, planGenerated, imageFetchDestination]);
 
-  // Video toggle
+  // Effect to fetch media when the active section/media type changes
+   useEffect(() => {
+        // Only fetch if a plan is generated and the destination is set
+        if (planGenerated && imageFetchDestination) {
+             console.log(`Effect triggered: section=${activeSection}, mediaType=${activeMediaType}, destination=${imageFetchDestination}`);
+             // Check if the destination context has changed since last media fetch
+             const destinationChanged = lastDestination !== imageFetchDestination;
+
+             if (activeSection === 'photos') {
+                 if (activeMediaType === 'photos') {
+                     // Fetch photos if they are empty OR if the destination changed
+                     if (images.length === 0 || destinationChanged) {
+                          console.log("Fetching initial photos...");
+                          setImages([]); // Clear previous images before new fetch
+                          setNextPageUrl(''); // Reset pagination
+                          setHasMore(true);
+                          imageFetcher(imageFetchDestination);
+                     }
+                 } else if (activeMediaType === 'videos') {
+                     // Fetch videos if they are empty OR if the destination changed
+                     if (videos.length === 0 || destinationChanged) {
+                         console.log("Fetching videos...");
+                         setVideos([]); // Clear previous videos
+                          fetchVideos();
+                     }
+                 }
+                 // Update the last destination tracker *after* deciding to fetch
+                if (destinationChanged) {
+                    setLastDestination(imageFetchDestination);
+                 }
+             }
+        }
+    }, [activeSection, activeMediaType, planGenerated, imageFetchDestination, lastDestination]); // Add lastDestination
+
+
+
   const handleVideoToggle = (videoId: number) => {
-    setVideoPlaying((prevVideoId) => (prevVideoId === videoId ? null : videoId));
-
+    const currentlyPlaying = videoPlaying === videoId;
     const videoRef = videoRefs.current[videoId];
 
+    // Pause the currently playing video if it's different from the clicked one
+     if (videoPlaying !== null && videoPlaying !== videoId && videoRefs.current[videoPlaying]) {
+         videoRefs.current[videoPlaying]?.pause();
+     }
+
+    // Toggle the clicked video
     if (videoRef) {
-      if (videoPlaying === videoId) {
+      if (currentlyPlaying) {
         videoRef.pause();
+        setVideoPlaying(null);
       } else {
-        videoRef.play();
+        videoRef.play().catch(err => console.error("Video play failed:", err)); // Handle potential play errors
+        setVideoPlaying(videoId);
       }
     }
   };
 
-  // Switch media type
+
   const switchMediaType = (type: 'photos' | 'videos') => {
-    setActiveMediaType(type);
-    if (type === 'photos') {
-      if (images.length === 0) {
-        imageFetcher(imageFetchDestination);
-      }
-    } else if (type === 'videos') {
-      if (videos.length === 0) {
-        fetchVideos();
-      }
-    }
+     console.log(`Switching media type to: ${type}`);
+     if (activeMediaType === type) return; // No change if already active
+
+     setActiveMediaType(type);
+      setVideoPlaying(null); // Stop any playing video when switching tabs
+
+     // No need to pre-fetch here, the useEffect hook handles fetching
+     // when activeMediaType changes if needed.
   };
 
-  // Animation variants
+  // Animation variants (Unchanged)
   const pageTransition = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut"
-      }
-    },
-    exit: { 
-      opacity: 0, 
-      y: -20,
-      transition: {
-        duration: 0.4
-      }
-    }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+    exit: { opacity: 0, y: -20, transition: { duration: 0.4 } }
   };
 
-  // Close subscription modal and redirect
+  // Modal handlers (Unchanged)
   const handleSubscribe = () => {
     setModalAnimating(true);
     setTimeout(() => {
-      router.push('/Component/Subscribe');
+      router.push('/Component/Subscribe'); // Ensure this route exists
     }, 300);
   };
 
-  // Close subscription modal and go home
   const handleClose = () => {
     setModalAnimating(true);
     setTimeout(() => {
-      router.push('/');
+       setShowModal(false); // Just close the modal
+       setModalAnimating(false);
+       // router.push('/'); // Redirecting home might be disruptive, let user stay
     }, 300);
   };
 
+  // --- JSX Return ---
   return (
     <AuthGuard>
+      {/* --- Add Toast Container Here --- */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored" // Use 'colored' for info/error distinction
+      />
       <Navbar />
-      <div className="bg-gray-50 text-gray-900 dark:text-white  bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-700 min-h-screen">
+      <div className="bg-gray-50 text-gray-900 dark:text-white dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 min-h-screen">
         <div className="pt-24 pb-16">
           <motion.div
             className="container mx-auto px-4 sm:px-6 lg:px-8"
@@ -811,7 +1062,8 @@ const Index = () => {
             exit="exit"
             variants={pageTransition}
           >
-            {!plan && (
+            {/* Conditional Title */}
+            {!planGenerated && !loading && ( // Show title only if no plan generated and not loading
               <div className="text-center mb-10">
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
                   Plan Your Perfect Journey
@@ -825,22 +1077,25 @@ const Index = () => {
             <div className={`flex flex-wrap gap-6 transition-all duration-700 ease-in-out`}>
               {/* Input Form */}
               <AnimatePresence mode="wait">
-                {!plan && (
+                {/* Show input form if no plan is generated OR if loading is finished */}
+                {!planGenerated && !loading && (
                   <motion.div
+                    key="input-form" // Add key for AnimatePresence
                     className="w-full lg:w-2/3 mx-auto"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.5 }}
                   >
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
                       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
                         <h2 className="text-2xl font-bold text-white">Travel Details</h2>
-                        <p className="text-blue-100">Tell us about your upcoming adventure</p>
+                        <p className="text-blue-100 mt-1">Tell us about your upcoming adventure</p>
                       </div>
-                      
-                      <div className="p-6">
-                        <InputForm
+
+                       <div className="p-6 md:p-8">
+                          {/* Pass all necessary props to InputForm */}
+                         <InputForm
                           startLocation={startLocation}
                           setStartLocation={setStartLocation}
                           destination={destination}
@@ -851,15 +1106,8 @@ const Index = () => {
                           setBudget={setBudget}
                           peopleCount={peopleCount}
                           setPeopleCount={setPeopleCount}
-                          ladiesCount={ladiesCount}
-                          setLadiesCount={setLadiesCount}
-                          elderlyCount={elderlyCount}
-                          setElderlyCount={setElderlyCount}
-                          childrenCount={childrenCount}
-                          setChildrenCount={setChildrenCount}
-                          loading={loading}
-                          planFetcher={planFetcher}
-                          imageLoading={imageLoading}
+                          // Pass down the relevant state setters based on tripForFamily logic handled inside InputForm
+                          tripForFamily={tripForFamily}
                           setTripForFamily={setTripForFamily}
                           familyElderlyCount={familyElderlyCount}
                           setFamilyElderlyCount={setFamilyElderlyCount}
@@ -869,221 +1117,278 @@ const Index = () => {
                           setFamilyChildrenCount={setFamilyChildrenCount}
                           familyPreferences={familyPreferences}
                           setFamilyPreferences={setFamilyPreferences}
-                        />
-                      </div>
+                          // Pass loading state and the fetcher function
+                          loading={loading} // Pass the main loading state
+                          planFetcher={planFetcher} ladiesCount={''} setLadiesCount={function (value: string): void {
+                            throw new Error('Function not implemented.');
+                          } } elderlyCount={''} setElderlyCount={function (value: string): void {
+                            throw new Error('Function not implemented.');
+                          } } childrenCount={''} setChildrenCount={function (value: string): void {
+                            throw new Error('Function not implemented.');
+                          } } imageLoading={false}                           // Add other props if needed by InputForm
+                         />
+                       </div>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Loading State */}
-              <AnimatePresence>
-                {loading && (
-                  <motion.div 
-                    className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <motion.div 
-                      className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl"
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                    >
-                      <div className="text-center">
-                        <div className="flex justify-center mb-4">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                          >
-                            <FaSpinner className="text-4xl text-blue-600 dark:text-blue-400" />
-                          </motion.div>
-                        </div>
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                          Creating Your Perfect Itinerary
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-300">
-                          We're designing a personalized travel plan for your journey to {destination}. This may take a moment...
-                        </p>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+             {/* Loading State Indicator */}
+               <AnimatePresence>
+                 {loading && (
+                   <motion.div
+                     key="loading-indicator" // Key for AnimatePresence
+                     className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 dark:bg-opacity-75 z-50"
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     exit={{ opacity: 0 }}
+                     transition={{ duration: 0.3 }}
+                   >
+                     <motion.div
+                       className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-11/12 mx-4 shadow-2xl text-center"
+                       initial={{ scale: 0.9, opacity: 0 }}
+                       animate={{ scale: 1, opacity: 1 }}
+                       exit={{ scale: 0.9, opacity: 0 }}
+                       transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                     >
+                       <div className="flex justify-center mb-5">
+                         <motion.div
+                           animate={{ rotate: 360 }}
+                           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                         >
+                           <FaSpinner className="text-5xl text-blue-600 dark:text-blue-400" />
+                         </motion.div>
+                       </div>
+                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                         Crafting Your Adventure...
+                       </h3>
+                       <p className="text-gray-600 dark:text-gray-300 px-4">
+                         {destination ? `We're designing your personalized plan for ${destination}.` : 'Getting things ready.'} This might take a moment.
+                       </p>
+                       {/* Optional: Add progress steps or messages here */}
+                     </motion.div>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
 
-              {/* Success Animation */}
-              <AnimatePresence>
-                {planGenerationSuccess && !loading && (
-                  <motion.div 
-                    className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onAnimationComplete={() => {
-                      setTimeout(() => {
-                        setPlanGenerationSuccess(false);
-                      }, 1500);
-                    }}
-                  >
-                    <motion.div 
-                      className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md shadow-2xl flex items-center justify-center"
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 1.1, opacity: 0 }}
-                    >
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200, damping: 10, delay: 0.2 }}
-                      >
-                        <FaCheckCircle className="text-6xl text-green-500" />
-                      </motion.div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+
+               {/* Plan Generation Success Animation */}
+               <AnimatePresence>
+                 {planGenerationSuccess && !loading && (
+                   <motion.div
+                     key="success-animation"
+                     className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[60]" // Higher z-index
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     exit={{ opacity: 0 }}
+                     transition={{ duration: 0.3 }}
+                     // Automatically dismiss after a short delay
+                     onAnimationComplete={() => {
+                       setTimeout(() => {
+                         setPlanGenerationSuccess(false);
+                       }, 1200); // Duration visible
+                     }}
+                   >
+                     <motion.div
+                       className="bg-white dark:bg-gray-800 rounded-full p-6 shadow-2xl flex items-center justify-center aspect-square"
+                       initial={{ scale: 0.5, opacity: 0 }}
+                       animate={{ scale: 1, opacity: 1, transition: { type: "spring", stiffness: 250, damping: 15, delay: 0.1 } }}
+                       exit={{ scale: 1.2, opacity: 0, transition: { duration: 0.4 } }}
+                     >
+                       <FaCheckCircle className="text-7xl text-green-500" />
+                     </motion.div>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+
 
               {/* Results Section */}
-              {plan && (
-                <motion.div 
-                  className="w-full"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h2 className="text-2xl font-bold text-white">
-                            Your {days}-Day Trip to {destination}
-                          </h2>
-                          <p className="text-blue-100">
-                            From {startLocation} • Budget: {budget}
-                          </p>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setPlan('');
-                            setPlanGenerated(false);
-                          }}
-                          className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition"
-                        >
-                          New Plan
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <ResultsSection
-                      loading={loading}
+              {/* Show results if a plan exists (planGenerated is true) AND not currently loading a new plan */}
+                {planGenerated && !loading && plan && (
+                 <motion.div
+                   key="results-section" // Key for AnimatePresence if needed
+                   className="w-full"
+                   initial={{ opacity: 0, y: 30 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ duration: 0.6, delay: 0.1 }} // Slight delay after loading finishes
+                 >
+                   <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                     {/* Results Header */}
+                     <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 md:p-6">
+                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                         <div>
+                           <h2 className="text-2xl font-bold text-white">
+                             {/* Dynamically display title based on loaded data */}
+                             Your {days || 'Custom'} Day Trip to {destination || 'Selected Destination'}
+                           </h2>
+                           <p className="text-blue-100 mt-1 text-sm">
+                              {startLocation && `From ${startLocation}`} {budget && `• Budget: ${budget}`} {peopleCount && `• ${peopleCount} Traveler(s)`}
+                           </p>
+                         </div>
+                         <button
+                           onClick={() => {
+                             // Reset state to allow new plan generation
+                              setPlan('');
+                              setPlanGenerated(false);
+                              setDestination(''); // Clear destination to force re-entry?
+                              setStartLocation('');
+                              setDays('');
+                              setBudget('');
+                              setPeopleCount('');
+                              setTripForFamily(false);
+                              setFamilyChildrenCount('');
+                              setFamilyElderlyCount('');
+                              setFamilyLadiesCount('');
+                              setFamilyPreferences('');
+                              setImages([]);
+                              setVideos([]);
+                              setNews([]);
+                              setLocationBio('');
+                              setActiveSection('plan'); // Reset to plan tab if needed elsewhere
+                              setError(null);
+                              setCurrentTripId(''); // Clear current trip ID
+                              setFeedbackSubmitted(false);
+                              // Optional: Scroll to top
+                               window.scrollTo({ top: 0, behavior: 'smooth' });
+                           }}
+                           className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition text-sm font-medium shrink-0"
+                         >
+                           Create New Plan
+                         </button>
+                       </div>
+                     </div>
+
+                      {/* Pass updated/correct props to ResultsSection */}
+                     <ResultsSection
+                      loading={loading} // Pass the main loading state
                       error={error}
                       plan={plan}
                       activeSection={activeSection}
                       setActiveSection={setActiveSection}
-                      location={location}
+                      location={destination} // Use destination from state
                       planGenerated={planGenerated}
                       news={news}
-                      locationImage={locationImage}
-                      locationBio={locationBio}
+                      loadingNews={loadingNews} // Pass news loading state
+
+                      // locationImage={locationImage} // Pass if used
+                      locationBio={locationBio} // Pass fetched bio
                       images={images}
-                      imageLoading={imageLoading}
+                      imageLoading={imageLoading} // Pass media loading state
                       hasMore={hasMore}
-                      loadMore={loadMore}
-                      fetchNewsForDestination={fetchNewsForDestination}
-                      destination={destination}
+                      loadMore={loadMore} // Pass load more function
+
+                      // fetchNewsForDestination={fetchNewsForDestination} // Pass if needed inside results
+                      destination={destination} // Pass destination
                       videos={videos}
-                      fetchVideos={fetchVideos}
-                      previousValue={previousValue}
+                      // fetchVideos={fetchVideos} // Pass if needed inside results
+                      // previousValue={previousValue} // Pass if used
                       activeMediaType={activeMediaType}
-                      switchMediaType={switchMediaType}
-                    />
-                  </div>
-                </motion.div>
-              )}
+                      switchMediaType={switchMediaType} // Pass media type switcher
+
+                      // Pass video refs and handlers
+                      videoRefs={videoRefs}
+                      videoPlaying={videoPlaying}
+                      handleVideoToggle={handleVideoToggle}
+                      // Pass feedback state and handlers
+                      feedbackSubmitted={feedbackSubmitted}
+                      submitFeedback={submitFeedback} // Pass the submit function
+                      currentTripId={currentTripId} // Pass current trip ID for context
+                      locationImage={''} fetchNewsForDestination={function (destination: string): Promise<void> {
+                        throw new Error('Function not implemented.');
+                      } } previousValue={''} fetchVideos={function (): Promise<void> {
+                        throw new Error('Function not implemented.');
+                      } }                     />
+                   </div>
+                 </motion.div>
+               )}
             </div>
           </motion.div>
         </div>
       </div>
 
-      {/* Subscription Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div 
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div 
-              className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-2xl max-w-md w-full mx-4"
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                <div className="flex items-center gap-3">
-                  <FaLock className="text-2xl" />
-                  <h2 className="text-xl font-bold">Premium Feature</h2>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  You've reached the limit of your free trial. Unlock unlimited travel planning by subscribing to our premium plan.
-                </p>
-                
-                <div className="bg-blue-50 dark:bg-gray-700 p-4 rounded-lg mb-6">
-                  <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Premium Benefits:</h3>
-                  <ul className="text-gray-700 dark:text-gray-300 space-y-1">
-                    <li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
-                      <span>Unlimited travel plans</span>
-                    </li><li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
-                      <span>Unlimited travel plans</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
-                      <span>Access to premium destinations</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
-                      <span>Advanced itinerary customization</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-green-500 flex-shrink-0" />
-                      <span>Offline access to your plans</span>
-                    </li>
-                  </ul>
-                </div>
-                
-                <div className="flex justify-end gap-4">
-                  <button
-                    onClick={handleClose}
-                    className={`px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg transition ${
-                      modalAnimating ? 'opacity-50 pointer-events-none' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                    disabled={modalAnimating}
-                  >
-                    Maybe Later
-                  </button>
-                  <button
-                    onClick={handleSubscribe}
-                    className={`px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-md transition ${
-                      modalAnimating ? 'opacity-50 pointer-events-none' : 'hover:from-blue-700 hover:to-indigo-700'
-                    }`}
-                    disabled={modalAnimating}
-                  >
-                    Subscribe Now
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+       {/* Subscription Modal */}
+       <AnimatePresence>
+         {showModal && (
+           <motion.div
+             key="subscription-modal"
+             className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-[70]" // Ensure high z-index
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             exit={{ opacity: 0 }}
+           >
+             <motion.div
+               className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-2xl max-w-lg w-11/12 mx-4"
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 25 } }}
+                exit={{ scale: 0.9, opacity: 0, y: 20, transition: { duration: 0.2 } }}
+             >
+               <div className="bg-gradient-to-r from-orange-500 to-red-600 p-5 text-white">
+                 <div className="flex items-center gap-3">
+                   <FaLock className="text-2xl" />
+                   <h2 className="text-xl font-semibold">Unlock Full Access</h2>
+                 </div>
+               </div>
+
+               <div className="p-6">
+                 <p className="text-gray-700 dark:text-gray-300 mb-5 text-base">
+                   You've used your free plan generations. Subscribe to our premium plan for unlimited travel planning and exclusive features!
+                 </p>
+
+                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-750 p-4 rounded-lg mb-6 border border-blue-200 dark:border-gray-600">
+                   <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 text-center text-lg">Premium Benefits Include:</h3>
+                   <ul className="text-gray-700 dark:text-gray-300 space-y-2 text-sm grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                      <li className="flex items-center gap-2">
+                       <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                       <span>Unlimited AI Itineraries</span>
+                     </li>
+                      <li className="flex items-center gap-2">
+                         <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                         <span>Advanced Customization</span>
+                     </li>
+                      <li className="flex items-center gap-2">
+                         <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                         <span>Priority Support</span>
+                     </li>
+                     <li className="flex items-center gap-2">
+                       <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                       <span>Exclusive Travel Tips</span>
+                     </li>
+                     <li className="flex items-center gap-2">
+                       <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                       <span>Save & Manage Trips</span>
+                     </li>
+                      <li className="flex items-center gap-2">
+                         <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                         <span>Offline Plan Access</span>
+                     </li>
+                   </ul>
+                 </div>
+
+                 <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+                   <button
+                     onClick={handleClose}
+                     className={`w-full sm:w-auto px-5 py-2.5 text-center text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg transition text-sm font-medium ${
+                       modalAnimating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-500'
+                     }`}
+                     disabled={modalAnimating}
+                   >
+                     Maybe Later
+                   </button>
+                   <button
+                     onClick={handleSubscribe}
+                     className={`w-full sm:w-auto px-6 py-2.5 text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-md transition text-sm ${
+                       modalAnimating ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5'
+                     }`}
+                     disabled={modalAnimating}
+                   >
+                     Subscribe Now
+                   </button>
+                 </div>
+               </div>
+             </motion.div>
+           </motion.div>
+         )}
+       </AnimatePresence>
     </AuthGuard>
   );
 };

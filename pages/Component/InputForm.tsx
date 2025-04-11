@@ -31,6 +31,8 @@ interface InputFormProps {
     setFamilyChildrenCount: (value: string) => void;
     familyPreferences: string;
     setFamilyPreferences: (value: string) => void;
+    tripForFamily: boolean;
+    
 }
 
 const InputForm: React.FC<InputFormProps> = ({

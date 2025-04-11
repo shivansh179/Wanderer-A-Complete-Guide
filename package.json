@@ -42,6 +42,7 @@
     "react-spring": "^9.7.5",
     "react-stripe-js": "^1.1.5",
     "react-syntax-highlighter": "^15.6.1",
+    "react-toastify": "^11.0.5",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "requests": "^0.3.0",
