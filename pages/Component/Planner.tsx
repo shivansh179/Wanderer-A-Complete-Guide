@@ -547,23 +547,23 @@ You are an expert, meticulous, and highly resourceful travel itinerary planner A
 
       // Budget, Preferences, Constraints
       base_prompt_template += `
-*   **Overall Trip Budget:** **EXTREMELY TIGHT** - ${budgetAmount.toLocaleString()} INR TOTAL. This covers *all* local expenses (accommodation, food, activities, local transport) for the entire group/person for the full ${durationDays} days. Adherence is paramount.
-*   **User Preferences:** ${tripForFamily ? (familyPreferences || 'Family Friendly Activities') : (favoritePlaces || 'General Tourist Spots')} (Prioritize Beaches & Amusement Parks if listed).
-*   **Mandatory Constraints:**
-    *   **Diet:** **Strictly VEGETARIAN** food options only.
-    *   **Interests:** Children enjoy beaches (if applicable based on familyChildrenCount > 0).
-*   **Other User Notes:** Religion: ${religion || 'N/A'}. Believer: ${believerOfGod ? 'Yes' : 'No'}. (Add any other specific important info state variable here, e.g., mobility notes).
-
-# SPECIFIC TASK FOR THIS API CALL
-{{SPECIFIC_INSTRUCTIONS}}
-
-# RESPONSE REQUIREMENTS (Apply to your generated output)
-
-*   **Recency & Accuracy:** Use your latest knowledge for details like estimated costs, operating hours, transportation options (e.g., ride-sharing availability, current metro lines), hotel/restaurant recommendations. Clearly state *estimates*. Recommend checking official websites closer to travel date.
-*   **Formatting:** Use headings (`##`/`###`). Daily plans: `### Day X: YYYY-MM-DD - Theme`. Activities: `*   HH:MM AM/PM - HH:MM AM/PM: [Activity] - Desc (Est. Cost: Z INR)`. Expenditure: `*   Est Cost: Food=X INR, Transport=Y INR, Activity=Z INR | Daily Total=T INR`.
-*   **Realism:** Be direct about budget limits. Prioritize free/low-cost. Justify fees. Note difficulties (e.g., ultra-budget family accommodation).
-*   **Clarity:** Be concise and actionable.
-`;
+              *   **Overall Trip Budget:** **EXTREMELY TIGHT** - ${budgetAmount.toLocaleString()} INR TOTAL. This covers *all* local expenses (accommodation, food, activities, local transport) for the entire group/person for the full ${durationDays} days. Adherence is paramount.
+              *   **User Preferences:** ${tripForFamily ? (familyPreferences || 'Family Friendly Activities') : (favoritePlaces || 'General Tourist Spots')} (Prioritize Beaches & Amusement Parks if listed).
+              *   **Mandatory Constraints:**
+                  *   **Diet:** **Strictly VEGETARIAN** food options only.
+                  *   **Interests:** Children enjoy beaches (if applicable based on familyChildrenCount > 0).
+              *   **Other User Notes:** Religion: ${religion || 'N/A'}. Believer: ${believerOfGod ? 'Yes' : 'No'}. (Add any other specific important info state variable here, e.g., mobility notes).
+                  
+              # SPECIFIC TASK FOR THIS API CALL
+              {{SPECIFIC_INSTRUCTIONS}}
+                  
+              # RESPONSE REQUIREMENTS (Apply to your generated output)
+                  
+              *   **Recency & Accuracy:** Use your latest knowledge for details like estimated costs, operating hours, transportation options (e.g., ride-sharing availability, current metro lines), hotel/restaurant recommendations. Clearly state *estimates*. Recommend checking official websites closer to travel date.
+              *   **Formatting:** Use headings ('##'/'###'). Daily plans: '### Day X: YYYY-MM-DD - Theme'. Activities: '*   HH:MM AM/PM - HH:MM AM/PM: [Activity] - Desc (Est. Cost: Z INR)'. Expenditure: '*   Est Cost: Food=X INR, Transport=Y INR, Activity=Z INR | Daily Total=T INR'.
+              *   **Realism:** Be direct about budget limits. Prioritize free/low-cost. Justify fees. Note difficulties (e.g., ultra-budget family accommodation).
+              *   **Clarity:** Be concise and actionable.
+              `;
       // --- End Base Prompt Template ---
 
 
@@ -607,15 +607,15 @@ Generate ONLY the following two sections for the specific date range: **${chunk_
 **CRITICAL REMINDERS for this chunk:**
 *   Strictly adhere to user **preferences** and **constraints** (VEGETARIAN, budget).
 *   Prioritize **low-cost/free** activities. Be realistic about the **extreme budget**.
-*   Follow **formatting** precisely (daily headings `### Day X...`, cost breakdown `* Est Cost...`).
+*   Follow **formatting** precisely (daily headings '### Day X...', cost breakdown '* Est Cost...').
 
 1.  **Detailed Day-by-Day Itinerary (${chunk_date_range_str}):**
-    *   For EACH day in this range: Use heading `### Day [Overall Day Number]: [YYYY-MM-DD] - [Brief Theme]` (use actual date if available, otherwise day number).
-    *   Include bullet points with time slots (`*   HH:MM AM/PM - HH:MM AM/PM: [Activity] - Details (Est. Cost: Z INR)`).
+    *   For EACH day in this range: Use heading '### Day [Overall Day Number]: [YYYY-MM-DD] - [Brief Theme]' (use actual date if available, otherwise day number).
+    *   Include bullet points with time slots ('*   HH:MM AM/PM - HH:MM AM/PM: [Activity] - Details (Est. Cost: Z INR)').
     *   Ensure VEGETARIAN-friendly, age-suitable activities. State estimated costs clearly.
 
 2.  **Daily Estimated Expenditure Breakdown (${chunk_date_range_str}):**
-    *   For EACH day: Use format `*   Estimated Cost: Food=X INR, Transport=Y INR, Activity=Z INR | Daily Total=T INR`.
+    *   For EACH day: Use format '*   Estimated Cost: Food=X INR, Transport=Y INR, Activity=Z INR | Daily Total=T INR'.
     *   Base estimates on ultra-budget options. Comment if unsustainable relative to overall budget.
 `;
         // Construct the prompt for this chunk using the base template
@@ -638,7 +638,7 @@ Generate ONLY the following two sections for the specific date range: **${chunk_
             }
           );
           const endTime = Date.now();
-          console.log(`   Chunk ${i + 1} API call completed in ${(endTime - startTime) / 1000:.2f} seconds.`);
+          // console.log(`Chunk ${i + 1} API call completed in ${(endTime - startTime) / 1000:.2f} seconds.`);
 
           // Process Response
           const chunk_text = response.data.candidates?.[0]?.content?.parts?.[0]?.text || `ERROR: No text found in response for chunk ${i + 1}. Check API response.`;
@@ -746,7 +746,7 @@ ${context_details}
           }
         );
         const endTime = Date.now();
-        console.log(`   Overall sections API call completed in ${(endTime - startTime) / 1000:.2f} seconds.`);
+        // console.log(`   Overall sections API call completed in ${(endTime - startTime) / 1000:.2f} seconds.`);
 
         // Process response
         overall_sections_result = response.data.candidates?.[0]?.content?.parts?.[0]?.text || `ERROR: No text found in overall sections response.`;
