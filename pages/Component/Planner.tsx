@@ -559,6 +559,12 @@ const Index = () => {
                           
                           6. Practical Travel Tips:
                           * Local transportation options, the best time to visit (season/weather), safety tips, and any important travel regulations or recommendations for tourists.
+
+                          7. Provide currency and weather forecast of that place. 
+
+                          8. Also Provide Links and docs of some youtube channels and docs one can go through about that place.
+
+                          9. Provide some hospitals, medical stores and emergency helpline numbers of the destination.
                           
                           Please tailor the information to a first-time traveler who wants to explore both the well-known and off-the-beaten-path experiences, focusing on immersive and educational travel.`
                 }

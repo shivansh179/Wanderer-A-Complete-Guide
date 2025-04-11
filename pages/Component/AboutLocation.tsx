@@ -38,7 +38,7 @@ const AboutLocation: React.FC<AboutLocationProps> = ({
   const [weather, setWeather] = useState<any>(null);
   const [currency, setCurrency] = useState<any>(null);
   const [parsedSections, setParsedSections] = useState<Record<string, string>>({});
-  const fallbackImage = "/images/default-location.jpg";
+  const fallbackImage = "/pachu.jpg";
   const safeDestination = destination || "Unknown Location";
 
   // Key sections from the bio
