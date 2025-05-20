@@ -601,14 +601,12 @@ const Index = () => {
         }
       }
 
-      // --- Post-Generation Steps (Only if a plan was generated) ---
        if (extractedPlan && extractedPlan.trim().length >= 100) {
          setPlan(extractedPlan);
-         setPlanGenerationSuccess(true); // Trigger success animation
-         setPlanGenerated(true); // Mark plan as generated for UI logic
+         setPlanGenerationSuccess(true);  
+         setPlanGenerated(true); 
 
-         // Reset media states for the new destination
-         setImages([]);
+           setImages([]);
          setNextPageUrl('');
          setTotalResults(0);
          setHasMore(true);
@@ -625,14 +623,11 @@ const Index = () => {
          setLocation(destination); // Update location for other components
          setLastDestination(destination); // Track last destination for media fetches
 
-         // Fetch news for the new destination
-         fetchNewsForDestination(destination);
+          fetchNewsForDestination(destination);
 
-         // Increment user's plan generation count in Firestore
-         await incrementPlanGenerationCount(user.email);
+          await incrementPlanGenerationCount(user.email);
 
-          // Create trip data object (without full plan)
-         const tripData = {
+          const tripData = {
              email: user.email,
              name: userDetails?.name || user.displayName || 'User',
              startLocation,
@@ -645,8 +640,7 @@ const Index = () => {
              familyLadiesCount: tripForFamily ? familyLadiesCount : '',
              familyChildrenCount: tripForFamily ? familyChildrenCount : '',
              familyPreferences: tripForFamily ? familyPreferences : '',
-             // userDetails: tripForFamily ? null : userSpecificDetails, // Decide if you want to store this snapshot
-         };
+          };
 
 
          // Save the trip metadata and link to the full plan
@@ -654,7 +648,6 @@ const Index = () => {
           if (!savedTripId) {
                 console.error("Failed to save the generated trip to database.");
                  toast.error("Plan generated, but failed to save the trip. Please try saving manually if needed.");
-                // Optionally, provide a way for the user to copy the plan text
             }
 
        } else if (!error) {
@@ -687,16 +680,68 @@ const Index = () => {
           return;
       }
 
-      const locationPrompt = `Provide a comprehensive guide for a traveler visiting ${locationName}. Include:
-      1.  Brief History & Significance
-      2.  Key Cultural Aspects (customs, language basics if applicable, etiquette)
-      3.  Top 5 Must-Visit Attractions (mix of popular and unique) with brief descriptions.
-      4.  Must-Try Local Cuisine (3-4 specific dishes or food types).
-      5.  Unique Local Experiences (e.g., festivals, markets, workshops).
-      6.  Practical Tips (best time to visit, basic safety, local transport overview).
-      7.  Currency used and general daily weather expectation (e.g., tropical, temperate, current season).
-      8.  Emergency contact info (general emergency number if known, maybe tourism police).
-      Format using markdown with clear headings.`;
+      const locationPrompt = `
+      You are a travel assistant. Create a **comprehensive travel guide** for a traveler visiting ${destination}. The guide should be informative, user-friendly, and clearly formatted using markdown. Cover the following points:
+      
+      ## 🗺️ 1. Overview & Historical Significance
+      - Provide a brief history of the location.
+      - Include any cultural, political, or spiritual importance the place holds.
+      
+      ## 🌍 2. Culture & Local Customs
+      - Key cultural aspects and traditions.
+      - Language(s) spoken and 5-10 useful phrases with English translations.
+      - Important etiquette and behavior tips for visitors (e.g., dress code, gestures to avoid).
+      
+      ## 📸 3. Top 5 Must-Visit Attractions
+      - Include a mix of popular landmarks and hidden gems.
+      - Provide brief descriptions and what makes each spot unique.
+      
+      ## 🍽️ 4. Must-Try Local Cuisine
+      - List 3–5 iconic dishes or drinks with a short description.
+      - Mention any food etiquette if important.
+      
+      ## 🎉 5. Unique Local Experiences
+      - Include festivals, workshops, traditional markets, or seasonal events.
+      - Suggest immersive cultural activities travelers can join.
+      
+      ## 🧭 6. Travel Tips & Practical Info
+      - Best time of year to visit (weather, festivals, crowds).
+      - Overview of local transportation options (e.g., tuk-tuks, metro, local buses).
+      - Safety tips (e.g., areas to avoid, common scams).
+      - Dress code or modesty expectations if relevant.
+      - Accessibility tips for travelers with disabilities.
+      
+      ## 💰 7. Currency & Cost Expectations
+      - Name and abbreviation of local currency.
+      - General cost of meals, transport, and accommodation (budget-midrange).
+      
+      ## 🌤️ 8. Weather & Climate
+      - General climate type (tropical, arid, temperate, etc.).
+      - Typical weather during current season.
+      
+      ## 🚨 9. Emergency Contacts
+      - General emergency number (police, ambulance, fire).
+      - Tourist police contact if available.
+      - Local woman helpline number.
+      - Child helpline number.
+      
+      ## 🏥 10. Hospitals & Clinics
+      - List 2–3 well-known hospitals or clinics (with names and general locations).
+      
+      ## 📱 11. SIM Cards & Internet
+      - Best options for tourists (prepaid SIM cards, eSIMs, top providers).
+      - Where to buy and typical costs.
+      
+      ## 🔗 12. Additional Resources & References
+      - Suggest 3–5 reliable **YouTube channels**, **websites**, or **blogs** that provide visual tours, travel tips, or cultural insights about the place.
+      
+      ## ✅ Format Notes:
+      - Use clear markdown headings (## or ###).
+      - Use bullet points or numbered lists where appropriate.
+      - Be concise but informative. Prioritize traveler usefulness.
+      - Feel free to add anything region-specific that would help tourists enjoy and respect the destination.
+      `;
+      
 
       let bioText = '';
       let primaryFailed = false;
