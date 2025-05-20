@@ -64,6 +64,8 @@ const Index = () => {
   const [modalAnimating, setModalAnimating] = useState(false);
   const [planGenerationSuccess, setPlanGenerationSuccess] = useState(false);
   const [currentTripId, setCurrentTripId] = useState('');
+  // Near other useState hooks
+  const [systemPromptAugmentation, setSystemPromptAugmentation] = useState<string>("");
 
   // IMPORTANT: Store API keys securely, preferably in environment variables
   // For demonstration purposes, they are here. Replace with process.env.REACT_APP_GEMINI_API_KEY etc.
@@ -224,49 +226,70 @@ const Index = () => {
 
 
     const updateTripFeedback = async (tripId: string, feedbackData: any) => {
-        if (!user || !user.email || !tripId) {
-            console.error('Missing user or trip ID');
-            return false;
-        }
-
-        try {
-            const userDocRef = doc(db, 'users', user.email);
-            const userDoc = await getDoc(userDocRef);
-
-            if (userDoc.exists() && userDoc.data().trips) {
-                const trips = userDoc.data().trips;
-                const updatedTrips = trips.map((trip: any) => {
-                    if (trip.id === tripId) {
-                        return {
-                            ...trip,
-                            feedbackSubmitted: true,
-                            feedbackData // Store feedback data directly if needed, or just the status
-                        };
-                    }
-                    return trip;
-                });
-
-                await updateDoc(userDocRef, { trips: updatedTrips });
-
-                // Optionally save feedback separately if detailed feedback needs querying
-                const feedbackDocRef = doc(db, 'feedback', tripId);
-                await setDoc(feedbackDocRef, {
-                    userId: user.email,
-                    tripId,
-                    ...feedbackData,
-                    createdAt: new Date().toISOString()
-                });
-
-                setFeedbackSubmitted(true); // Update local state
-                return true;
-            }
-
-            return false;
-        } catch (error) {
-            console.error('Error updating feedback:', error);
-            return false;
-        }
-    };
+      if (!user || !user.email || !tripId) {
+          console.error('Missing user or trip ID for feedback update');
+          // toast.error already handled by submitFeedback caller generally
+          return false;
+      }
+  
+      // Assuming feedbackData is an object like { feedbackText: "..." }
+      const currentFeedbackText = feedbackData?.feedbackText || "";
+      let newAugmentation = ""; // Initialize to empty string
+  
+      if (currentFeedbackText.trim()) {
+          newAugmentation = await analyzeFeedbackAndGeneratePromptSnippet(currentFeedbackText);
+          // Update the React state for systemPromptAugmentation
+          // This makes the change "permanent" for the current session
+          setSystemPromptAugmentation(newAugmentation);
+          console.log("System prompt augmentation updated to:", newAugmentation);
+      } else {
+          console.log("No feedback text provided, not analyzing or updating prompt augmentation.");
+      }
+  
+      try {
+          const userDocRef = doc(db, 'users', user.email);
+          const userDoc = await getDoc(userDocRef);
+  
+          if (userDoc.exists()) {
+              const trips = userDoc.data()?.trips || [];
+              const updatedTrips = trips.map((trip: any) => {
+                  if (trip.id === tripId) {
+                      return {
+                          ...trip,
+                          feedbackSubmitted: true,
+                          rawFeedbackText: currentFeedbackText || trip.rawFeedbackText || '' // Store/update raw feedback
+                      };
+                  }
+                  return trip;
+              });
+  
+              await updateDoc(userDocRef, { trips: updatedTrips });
+  
+              // Store raw feedback and the generated snippet in the 'feedback' collection (for record-keeping)
+              if (currentFeedbackText.trim()) { // Only save if there was feedback text
+                  const feedbackDocRef = doc(db, 'feedback', tripId);
+                  await setDoc(feedbackDocRef, {
+                      userId: user.email,
+                      tripId,
+                      rawFeedbackText: currentFeedbackText,
+                      generatedPromptSnippet: newAugmentation, // Store the snippet generated
+                      createdAt: new Date().toISOString()
+                  }, { merge: true });
+                  console.log("Feedback record saved to feedback collection for trip:", tripId);
+              }
+  
+              setFeedbackSubmitted(true); // Update local UI state
+              return true;
+          } else {
+              console.warn(`User document for ${user.email} not found. Cannot update trip feedback status.`);
+              return false;
+          }
+      } catch (error) {
+          console.error('Error during updateTripFeedback (updating Firestore):', error);
+          toast.error("Failed to save feedback status to your profile.");
+          return false;
+      }
+  };
 
 
     const deleteTrip = async (tripId: string) => {
@@ -305,6 +328,87 @@ const Index = () => {
             return false;
         }
     };
+
+
+
+
+
+
+
+
+    // New function for feedback analysis (client-side call)
+    const analyzeFeedbackAndGeneratePromptSnippet = async (feedbackText: string): Promise<string> => {
+        console.log("analyzeFeedbackAndGeneratePromptSnippet: Received feedback text:", feedbackText); // Log input
+        if (!feedbackText || !feedbackText.trim()) {
+            console.log("analyzeFeedbackAndGeneratePromptSnippet: No feedback text provided, returning empty snippet.");
+            return "";
+        }
+
+        const FEEDBACK_ANALYZER_API_KEY = FALLBACK_GEMINI_API_KEY; // Using the fallback key as initially intended for this
+        if (!FEEDBACK_ANALYZER_API_KEY) {
+            console.error("Feedback Analyzer API Key (FALLBACK_GEMINI_API_KEY) is missing!");
+            toast.error("Configuration error: Cannot analyze feedback.");
+            return ""; // Return empty, but this is a config error
+        }
+
+        // Modified prompt for more robust extraction
+        const feedbackAnalysisPrompt = `
+            Analyze the following user's trip feedback carefully:
+            ---
+            ${feedbackText}
+            ---
+            Your task is to extract key preferences. Identify up to one main thing the user LIKED and up to one main thing the user DISLIKED.
+            If multiple likes/dislikes are present, choose the most emphasized or clearest ones.
+            Construct a concise statement summarizing these. Start the statement with "Based on previous feedback, the user...".
+            
+            Examples of desired output statements:
+            - "Based on previous feedback, the user really enjoyed exploring historical sites and disliked very touristy restaurants."
+            - "Based on previous feedback, the user preferred quiet nature spots."
+            - "Based on previous feedback, the user found the guided tours too rushed."
+            - "Based on previous feedback, the user indicated no strong likes or dislikes from this feedback." (Use this if nothing clear is found)
+
+            Provide ONLY this single statement. Do not add any other conversational text or markdown.
+            If the feedback is too vague to extract clear preferences, explicitly state that no strong preferences were found in your summary statement.
+        `;
+
+        try {
+            console.log("analyzeFeedbackAndGeneratePromptSnippet: Analyzing feedback with LLM...");
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${FEEDBACK_ANALYZER_API_KEY}`,
+                { contents: [{ parts: [{ text: feedbackAnalysisPrompt }] }] },
+                { headers: { 'Content-Type': 'application/json' }, timeout: 35000 }
+            );
+            
+            let snippet = response.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+            console.log("analyzeFeedbackAndGeneratePromptSnippet: Raw LLM snippet output:", snippet);
+
+            // Ensure it starts with the desired phrase, or consider it "no preference found" for augmentation
+            if (snippet && snippet.toLowerCase().startsWith("based on previous feedback, the user")) {
+                // If the LLM explicitly says "no strong preferences found" or similar, treat it as effectively empty for augmentation
+                if (snippet.toLowerCase().includes("no strong likes or dislikes") || snippet.toLowerCase().includes("no strong preferences were found") || snippet.toLowerCase().includes("no clear preference")) {
+                    console.log("analyzeFeedbackAndGeneratePromptSnippet: LLM indicated no strong preferences, returning empty snippet for augmentation.");
+                    return ""; // This will prevent the note from showing if no actionable feedback
+                }
+                console.log("analyzeFeedbackAndGeneratePromptSnippet: Valid snippet generated:", snippet);
+                return snippet;
+            } else if (snippet) {
+                // LLM might have returned something else, not in the desired format.
+                console.warn("analyzeFeedbackAndGeneratePromptSnippet: Snippet not in expected format, treating as no actionable feedback. Snippet was:", snippet);
+                return ""; // Treat as no actionable feedback
+            } else {
+                console.log("analyzeFeedbackAndGeneratePromptSnippet: LLM returned empty snippet.");
+                return "";
+            }
+
+        } catch (error: any) {
+            console.error('analyzeFeedbackAndGeneratePromptSnippet: Error calling Feedback Analyzer LLM:', error.response?.data || error.message);
+            toast.error("Could not analyze feedback at this time due to an AI error.");
+            return ""; // Return empty string on error
+        }
+    };
+
+
+
 
 
     const submitFeedback = async (feedbackData: any) => {
@@ -422,7 +526,7 @@ const Index = () => {
           }
 
           // Allow admins or users within the limit
-          if (planGenerationCount < 3 || authenticatedUser.email === 'prasantshukla89@gmail.com') {
+          if (planGenerationCount < 20 || authenticatedUser.email === 'prasantshukla89@gmail.com') {
              setUser(authenticatedUser);
              setShowModal(false); // Ensure modal is hidden if user becomes eligible
           } else {
@@ -448,6 +552,7 @@ const Index = () => {
 
 
   // --- Plan Generation ---
+// --- Plan Generation ---
   const planFetcher = async () => {
     setPlan('');
     setLoading(true);
@@ -456,61 +561,58 @@ const Index = () => {
     setPlanGenerated(false); // Reset generated state
 
     if (!user || !user.email) {
-      setError('User not authenticated. Please log in.');
-      toast.error('User not authenticated. Please log in.');
-      setLoading(false);
-      return;
+        setError('User not authenticated. Please log in.');
+        toast.error('User not authenticated. Please log in.');
+        setLoading(false);
+        return;
     }
 
     let userDetails: any;
     let planGenerationCount = 0;
 
+    // --- MODIFIED: Use the current systemPromptAugmentation state ---
+    const activeSystemPromptAugmentation = systemPromptAugmentation;
+    // --- END MODIFICATION ---
+
     try {
-      // Fetch user details and count *before* proceeding
-       const userDocRef = doc(db, 'users', user.email);
+        // Fetch user details and count *before* proceeding
+        const userDocRef = doc(db, 'users', user.email);
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-            // Handle case where user doc might not exist yet (e.g., first time user just signed up)
-            // Option 1: Create a basic doc here
-            // Option 2: Rely on profile completion step elsewhere
-             console.warn(`User document for ${user.email} not found. Creating or using defaults.`);
-             // Create a default structure if needed, or ensure profile completion redirects
-             // For now, assume defaults or that required fields are handled elsewhere
-             userDetails = { name: user.displayName || "User", /* other defaults */ };
-             // If creating here: await setDoc(userDocRef, { email: user.email, planGenerationCount: 0, createdAt: new Date().toISOString() });
+            console.warn(`User document for ${user.email} not found. Creating or using defaults.`);
+            userDetails = { name: user.displayName || "User" };
         } else {
             userDetails = userDoc.data();
             planGenerationCount = userDetails?.planGenerationCount || 0;
         }
 
+        // Check plan generation limit AGAIN (important safety check)
+        if (planGenerationCount >= 20 && user.email !== 'prasantshukla89@gmail.com') {
+            setShowModal(true);
+            setLoading(false);
+            return;
+        }
 
-      // Check plan generation limit AGAIN (important safety check)
-      if (planGenerationCount >= 3 && user.email !== 'prasantshukla89@gmail.com') {
-        setShowModal(true);
-        setLoading(false);
-        return;
-      }
+        fetchAboutLocation(destination); // Start fetching about info
 
-      // Fetch about location concurrently (optional optimization)
-       fetchAboutLocation(destination); // Start fetching about info
+        const userSpecificDetails = `
+            Name: ${userDetails?.name || user.displayName || 'N/A'}
+            Religion: ${userDetails?.religion || 'N/A'}
+            Favorite Places: ${userDetails?.favoritePlaces || 'N/A'}
+            Believer of God: ${userDetails?.believerOfGod ? 'Yes' : 'No'}
+            Age: ${userDetails?.age || 'N/A'}
+        `;
 
-      const userSpecificDetails = `
-        Name: ${userDetails?.name || user.displayName || 'N/A'}
-        Religion: ${userDetails?.religion || 'N/A'}
-        Favorite Places: ${userDetails?.favoritePlaces || 'N/A'}
-        Believer of God: ${userDetails?.believerOfGod ? 'Yes' : 'No'}
-        Age: ${userDetails?.age || 'N/A'}
-      `;
-
-      let travelPlanPrompt = '';
-      let fallBackPrompt = ''; // Define fallback prompt structure
+        let travelPlanPrompt = '';
+        let fallBackPrompt = '';
 
         if (tripForFamily) {
             travelPlanPrompt = `I am planning a ${days}-day trip from ${startLocation} to ${destination} for my family.
             They are ${peopleCount} people in total, with ${familyLadiesCount || 0} ladies, ${familyElderlyCount || 0} elders, and ${familyChildrenCount || 0} children.
             Total budget is ${budget}. Please consider the following family preferences for travel to create a detailed itinerary:
             ${familyPreferences || 'No specific preferences mentioned.'}
+            ${activeSystemPromptAugmentation} {/* <<< MODIFIED: Inject augmentation here */}
             The itinerary should include family-friendly travel routes, must-visit places, activities, and an estimated budget breakdown.
             Additionally, if any members have special needs, include safety tips for elderly, ladies, and children. Focus on realistic options within the budget.`;
 
@@ -518,160 +620,158 @@ const Index = () => {
             Budget: ${budget}.
             Group: ${peopleCount} total (${familyLadiesCount || 0} ladies, ${familyElderlyCount || 0} elders, ${familyChildrenCount || 0} children).
             Preferences: ${familyPreferences || 'General family-friendly activities'}.
+            ${activeSystemPromptAugmentation} {/* <<< MODIFIED: Inject augmentation here */}
             Include: Daily plan (timing, activity, est. cost), transport, accommodation ideas (budget-friendly), safety tips. Use markdown format.`;
         } else {
-             travelPlanPrompt = `I am planning a ${days}-day solo trip from ${startLocation} to ${destination}.
-             My budget is ${budget}. Please consider the following personal details to create a detailed itinerary:
-             ${userSpecificDetails}
-             The itinerary should include travel routes, must-visit places, activities suited to my profile, and an estimated budget breakdown. Focus on realistic options within the budget.`;
+            travelPlanPrompt = `I am planning a ${days}-day solo trip from ${startLocation} to ${destination}.
+            My budget is ${budget}. Please consider the following personal details to create a detailed itinerary:
+            ${userSpecificDetails}
+            ${activeSystemPromptAugmentation} {/* <<< MODIFIED: Inject augmentation here */}
+            The itinerary should include travel routes, must-visit places, activities suited to my profile, and an estimated budget breakdown. Focus on realistic options within the budget.`;
 
-              fallBackPrompt = `Generate a detailed ${days}-day solo travel itinerary from ${startLocation} to ${destination}.
-              Budget: ${budget}.
-              Traveler Profile: ${userSpecificDetails}.
-              Include: Daily plan (timing, activity, est. cost), transport, accommodation ideas (budget/solo-friendly), relevant activities based on profile. Use markdown format.`;
+            fallBackPrompt = `Generate a detailed ${days}-day solo travel itinerary from ${startLocation} to ${destination}.
+            Budget: ${budget}.
+            Traveler Profile: ${userSpecificDetails}.
+            ${activeSystemPromptAugmentation} {/* <<< MODIFIED: Inject augmentation here */}
+            Include: Daily plan (timing, activity, est. cost), transport, accommodation ideas (budget/solo-friendly), relevant activities based on profile. Use markdown format.`;
         }
 
+        let extractedPlan = '';
+        let primaryModelFailed = false;
 
-      let extractedPlan = '';
-      let primaryModelFailed = false;
-
-      // --- Attempt 1: Primary Model (Gemini 1.5 Flash) ---
-      try {
-        console.log("Attempting plan generation with Primary Model...");
-        const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-          { contents: [{ parts: [{ text: travelPlanPrompt }] }] },
-          { headers: { 'Content-Type': 'application/json' }, timeout: 45000 } // Added timeout
-        );
-
-        // Check response carefully
-        extractedPlan = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!extractedPlan || extractedPlan.trim().length < 150) { // Stricter check
-          console.warn("Primary model response was insufficient.");
-          primaryModelFailed = true;
-        } else {
-          console.log("Primary model succeeded.");
-        }
-
-      } catch (err: any) {
-        console.error('Error calling Primary Model:', err.response?.data || err.message);
-        primaryModelFailed = true; // Mark primary as failed on error
-         // Optionally, show a less alarming message if it's just a timeout or rate limit
-         if (axios.isCancel(err)) {
-             console.log('Primary request canceled:', err.message);
-         } else if (err.code === 'ECONNABORTED') {
-             console.warn('Primary model request timed out.');
-         } else {
-            // Keep generic error for other issues
-            //setError('An issue occurred with the primary AI. Trying backup...'); // Set temporary error
-         }
-      }
-
-      // --- Attempt 2: Fallback Model (Gemma) ---
-      if (primaryModelFailed) {
-        setError(null); // Clear temporary error if any
-        console.warn("Switching to Fallback Model...");
-        toast.info("Primary AI is busy or unavailable. Trying backup...", { autoClose: 3500 }); // Show toast
-
+        // --- Attempt 1: Primary Model (Gemini 1.5 Flash) ---
         try {
-          const fallbackResponse = await axios.post(
-            // --- Ensure correct endpoint for Gemma 3 ---
-             // Check Google AI Studio or docs for the exact endpoint if this changes
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${FALLBACK_GEMINI_API_KEY}`, // Example using Gemma 2 27b
-            { contents: [{ parts: [{ text: fallBackPrompt }] }] }, // Using the simplified fallback prompt
-            { headers: { 'Content-Type': 'application/json' }, timeout: 60000 } // Longer timeout for potentially slower model
-          );
+            console.log("Attempting plan generation with Primary Model...");
+            console.log("System Prompt for Primary Model:", travelPlanPrompt); // Log the full prompt
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                { contents: [{ parts: [{ text: travelPlanPrompt }] }] },
+                { headers: { 'Content-Type': 'application/json' }, timeout: 45000 }
+            );
 
-          extractedPlan = fallbackResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-          if (!extractedPlan || extractedPlan.trim().length < 100) {
-            console.error("Fallback model also provided insufficient response.");
-            setError('Failed to generate plan using both primary and backup AI models. Please try again later.');
-            toast.error('Sorry, we could not generate the plan right now.');
-            setPlan(''); // Ensure plan is empty
-          } else {
-            console.log("Fallback model succeeded.");
-            setError(null); // Clear any previous errors if fallback works
-          }
-        } catch (fallbackErr: any) {
-          console.error('Error calling Fallback Model:', fallbackErr.response?.data || fallbackErr.message);
-          setError('Failed to generate plan. Both AI models encountered issues.');
-          toast.error('Sorry, plan generation failed completely.');
-          setPlan(''); // Ensure plan is empty
-        }
-      }
-
-      // --- Post-Generation Steps (Only if a plan was generated) ---
-       if (extractedPlan && extractedPlan.trim().length >= 100) {
-         setPlan(extractedPlan);
-         setPlanGenerationSuccess(true); // Trigger success animation
-         setPlanGenerated(true); // Mark plan as generated for UI logic
-
-         // Reset media states for the new destination
-         setImages([]);
-         setNextPageUrl('');
-         setTotalResults(0);
-         setHasMore(true);
-         setVideos([]);
-         setActiveMediaType('photos'); // Default to photos
-         setVideoPlaying(null);
-         videoRefs.current = {};
-
-         // Update UI state values for the new plan
-         setImageFetchDestination(destination);
-         setActiveSection('plan'); // Show the plan first
-         setPreviousValue(currentValue); // Store old destination if needed
-         setCurrentValue(destination);
-         setLocation(destination); // Update location for other components
-         setLastDestination(destination); // Track last destination for media fetches
-
-         // Fetch news for the new destination
-         fetchNewsForDestination(destination);
-
-         // Increment user's plan generation count in Firestore
-         await incrementPlanGenerationCount(user.email);
-
-          // Create trip data object (without full plan)
-         const tripData = {
-             email: user.email,
-             name: userDetails?.name || user.displayName || 'User',
-             startLocation,
-             destination,
-             days,
-             budget,
-             peopleCount,
-             tripForFamily,
-             familyElderlyCount: tripForFamily ? familyElderlyCount : '', // Only save family details if it's a family trip
-             familyLadiesCount: tripForFamily ? familyLadiesCount : '',
-             familyChildrenCount: tripForFamily ? familyChildrenCount : '',
-             familyPreferences: tripForFamily ? familyPreferences : '',
-             // userDetails: tripForFamily ? null : userSpecificDetails, // Decide if you want to store this snapshot
-         };
-
-
-         // Save the trip metadata and link to the full plan
-         const savedTripId = await saveTrip(tripData, extractedPlan);
-          if (!savedTripId) {
-                console.error("Failed to save the generated trip to database.");
-                 toast.error("Plan generated, but failed to save the trip. Please try saving manually if needed.");
-                // Optionally, provide a way for the user to copy the plan text
+            extractedPlan = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!extractedPlan || extractedPlan.trim().length < 150) {
+                console.warn("Primary model response was insufficient.");
+                primaryModelFailed = true;
+            } else {
+                console.log("Primary model succeeded.");
             }
 
-       } else if (!error) {
-           // This case handles where both models returned insufficient content but didn't throw an error
-           setError('The AI could not generate a detailed plan with the provided information. Please try adjusting your request.');
-           toast.warn('Could not generate a detailed plan. Try being more specific or adjusting the parameters.');
-       }
+        } catch (err: any) {
+            console.error('Error calling Primary Model:', err.response?.data || err.message);
+            primaryModelFailed = true;
+            if (axios.isCancel(err)) {
+                console.log('Primary request canceled:', err.message);
+            } else if (err.code === 'ECONNABORTED') {
+                console.warn('Primary model request timed out.');
+            }
+        }
 
+        // --- Attempt 2: Fallback Model ---
+        if (primaryModelFailed) {
+            setError(null);
+            console.warn("Switching to Fallback Model...");
+            toast.info("Primary AI is busy or unavailable. Trying backup...", { autoClose: 3500 });
+            console.log("System Prompt for Fallback Model:", fallBackPrompt); // Log the full prompt
+
+            try {
+                const fallbackResponse = await axios.post(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${FALLBACK_GEMINI_API_KEY}`,
+                    { contents: [{ parts: [{ text: fallBackPrompt }] }] },
+                    { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
+                );
+
+                extractedPlan = fallbackResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!extractedPlan || extractedPlan.trim().length < 100) {
+                    console.error("Fallback model also provided insufficient response.");
+                    setError('Failed to generate plan using both primary and backup AI models. Please try again later.');
+                    toast.error('Sorry, we could not generate the plan right now.');
+                    setPlan('');
+                } else {
+                    console.log("Fallback model succeeded.");
+                    setError(null);
+                }
+            } catch (fallbackErr: any) {
+                console.error('Error calling Fallback Model:', fallbackErr.response?.data || fallbackErr.message);
+                setError('Failed to generate plan. Both AI models encountered issues.');
+                toast.error('Sorry, plan generation failed completely.');
+                setPlan('');
+            }
+        }
+
+        // --- Post-Generation Steps (Only if a plan was generated) ---
+        if (extractedPlan && extractedPlan.trim().length >= 100) {
+            // --- MODIFIED: Prepend verification note if feedback was used ---
+            let finalPlanDisplay = extractedPlan;
+            if (activeSystemPromptAugmentation) {
+                // Attempt to make the note more readable by extracting the core preference
+                const corePreference = activeSystemPromptAugmentation
+                                        .replace(/^Based on previous feedback, the user\s*/i, '')
+                                        .replace(/\.$/, '')
+                                        .trim();
+                const feedbackNotice = `📝 **Note:** We've considered your recent feedback in crafting this plan! (Influencing factors included aspects like: "${corePreference}")\n\n---\n\n`;
+                finalPlanDisplay = feedbackNotice + extractedPlan;
+                console.log("Feedback notice prepended to the plan:", feedbackNotice);
+            }
+            // --- END MODIFICATION ---
+
+            setPlan(finalPlanDisplay); // MODIFIED: Use finalPlanDisplay
+            setPlanGenerationSuccess(true);
+            setPlanGenerated(true);
+
+            setImages([]);
+            setNextPageUrl('');
+            setTotalResults(0);
+            setHasMore(true);
+            setVideos([]);
+            setActiveMediaType('photos');
+            setVideoPlaying(null);
+            videoRefs.current = {};
+
+            setImageFetchDestination(destination);
+            setActiveSection('plan');
+            setPreviousValue(currentValue);
+            setCurrentValue(destination);
+  setLocation(destination);
+            setLastDestination(destination);
+
+            fetchNewsForDestination(destination);
+            await incrementPlanGenerationCount(user.email);
+
+            const tripData = {
+                email: user.email,
+                name: userDetails?.name || user.displayName || 'User',
+                startLocation,
+                destination,
+                days,
+                budget,
+                peopleCount,
+                tripForFamily,
+                familyElderlyCount: tripForFamily ? familyElderlyCount : '',
+                familyLadiesCount: tripForFamily ? familyLadiesCount : '',
+                familyChildrenCount: tripForFamily ? familyChildrenCount : '',
+                familyPreferences: tripForFamily ? familyPreferences : '',
+            };
+
+            const savedTripId = await saveTrip(tripData, extractedPlan); // Save original plan, not with notice
+            if (!savedTripId) {
+                console.error("Failed to save the generated trip to database.");
+                toast.error("Plan generated, but failed to save the trip. Please try saving manually if needed.");
+            }
+
+        } else if (!error) {
+            setError('The AI could not generate a detailed plan with the provided information. Please try adjusting your request.');
+            toast.warn('Could not generate a detailed plan. Try being more specific or adjusting the parameters.');
+        }
 
     } catch (err: any) {
-       // Catch any unexpected errors during the process (e.g., Firestore access)
-       console.error('Unhandled error during plan generation process:', err);
-       setError(err.message || 'An unexpected error occurred during plan generation.');
+        console.error('Unhandled error during plan generation process:', err);
+        setError(err.message || 'An unexpected error occurred during plan generation.');
         toast.error('An unexpected error occurred. Please try again.');
-       setPlan('');
+        setPlan('');
     } finally {
-      setLoading(false); // Ensure loading is always turned off
+        setLoading(false);
     }
   };
 
@@ -1228,6 +1328,7 @@ const Index = () => {
                          <button
                            onClick={() => {
                              // Reset state to allow new plan generation
+                              setSystemPromptAugmentation("");
                               setPlan('');
                               setPlanGenerated(false);
                               setDestination(''); // Clear destination to force re-entry?
