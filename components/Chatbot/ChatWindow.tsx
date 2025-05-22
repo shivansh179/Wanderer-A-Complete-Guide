@@ -29,7 +29,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
     const [inputValue, setInputValue] = useState('');
     const [isBotTyping, setIsBotTyping] = useState(false); // For loading indicator
     const router = useRouter();
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null!); // Add '!' to assure TypeScript it won't be null when used
     // No need for lastBotQuestionRequiresConfirmation state, can use last message in array
 
     const scrollToBottom = () => {
@@ -167,8 +167,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onClose }) => {
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
-            </div>
+ </div>
 
             {/* Input Area */}
             <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">

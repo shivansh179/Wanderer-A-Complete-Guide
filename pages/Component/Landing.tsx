@@ -375,6 +375,7 @@ const Landing = () => {
           favoritePlaces: favoritePlaces,
           believerOfGod: believerOfGod,
           subscribed: false,
+          subscription : '',
           trips: [], // Initialize empty trips array for new users
           createdAt: new Date()
         });
