@@ -293,10 +293,14 @@ const UserPlansPage: React.FC = () => {
               </h1>
               <p className="text-gray-600 mt-1">Manage and explore your travel adventures</p>
             </div>
-            <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-full">
-              <Plane className="h-5 w-5 text-blue-600" />
-              <span className="text-blue-800 font-medium">{plans.length} Trip{plans.length !== 1 ? 's' : ''}</span>
-            </div>
+            <div className="flex items-center bg-blue-50 px-6 py-4 rounded-full space-x-2">
+  <Plane className="h-5 w-5 text-blue-600" aria-hidden="true" />
+  <div className="flex items-baseline space-x-1 text-blue-800 font-medium text-sm">
+    <span>{plans.length}</span>
+    <span>Trip{plans.length !== 1 ? 's' : ''}</span>
+  </div>
+</div>
+
           </div>
         </div>
       </div>
