@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { app } from "../../FirebaseCofig"; // Adjust path as needed
+import Navbar from "../Component/Navbar/index";
 
 type Plan = {
   name: string;
@@ -144,11 +145,13 @@ const SubscriptionPlans: React.FC = () => {
   };
 
   return (
+    <>
+    <Navbar/>
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-sky-50 text-gray-800">
       <main className="flex-1 py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 sm:mb-16">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">
+            <h1 className="text-4xl mt-10 sm:text-5xl font-extrabold text-gray-900 mb-4">
               Choose Your Perfect Plan
             </h1>
             <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
@@ -283,6 +286,7 @@ const SubscriptionPlans: React.FC = () => {
         </div>
       </footer>
     </div>
+    </>
   );
 };
 
