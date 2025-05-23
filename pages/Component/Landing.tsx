@@ -12,7 +12,7 @@ import { RiCompassDiscoverLine } from "react-icons/ri";
 import { MdOutlineExplore, MdTravelExplore } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import toast from 'react-hot-toast';
-
+ 
 type Trip = {
   id: string;
   feedbackSubmitted: boolean;
@@ -399,7 +399,7 @@ const Landing = () => {
 
       {/* Promotional Toast Notification */}
       {showToast && (
-        <div className={`fixed top-0 mt-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md ${toastClosing ? 'animate-slide-up' : 'animate-slide-down'}`}>
+        <div className={`fixed top-0 mt-5 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md ${toastClosing ? 'animate-slide-up' : 'animate-slide-down'}`}>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
             <div className="flex items-center p-4">
               <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900 rounded-full p-2">
@@ -461,7 +461,7 @@ const Landing = () => {
               </p>
               
               {/* Search Box */}
-              <div className="bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
+              <div className="hidden lg:block bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1">
                     <label className="block text-sm font-medium mb-1">Destination</label>
@@ -542,9 +542,11 @@ const Landing = () => {
                           <span className="text-gray-900 dark:text-white font-bold">{destination.price}</span>
                           <span className="text-gray-500 dark:text-gray-400 text-sm"> / {destination.duration}</span>
                         </div>
-                        <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition duration-300">
-                          Book Now
+                        <Link href="/Component/Planner">                        <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition duration-300">
+                          Explore
                         </button>
+                        </Link>
+
                       </div>
                     </div>
                   </div>
@@ -607,12 +609,14 @@ const Landing = () => {
                         <FaMapMarkerAlt className="mr-1" />
                         {experience.location}
                       </p>
+                      <Link href="/Component/Planner">
                       <div className="mt-4 flex justify-between items-center">
                         <span className="text-white font-bold">{experience.price}</span>
                         <button className="px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-lg transition duration-300">
-                          View Details
+                          Explore in detail
                         </button>
                       </div>
+                      </Link>
                     </div>
                   </div>
                 </div>

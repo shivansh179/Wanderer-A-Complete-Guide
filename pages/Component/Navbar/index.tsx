@@ -299,6 +299,18 @@ const Index = () => {
                             <span>Your Profile</span>
                           </div>
                         </Link>
+
+
+                    <Link href="/BestPlaces">
+              <div 
+                
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-white cursor-pointer"
+              >
+                 <span className="font-medium">Explore best places</span>
+              </div>
+              </Link>
+
+              
                         <Link href="/my-trips">
                           <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                             <FaMapMarkedAlt />
@@ -395,7 +407,7 @@ const Index = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white dark:bg-gray-900 shadow-xl border-t border-gray-200 dark:border-gray-800 transition-all duration-300">
           <div className="container mx-auto p-4">
-            <nav className="space-y-3">
+            <nav className="">
               {/* Current Plan Badge for Mobile */}
               <Link href="/Subscription">
                 <div className={`
@@ -437,6 +449,15 @@ const Index = () => {
                 <FaMapMarkedAlt className="text-blue-600 dark:text-blue-400" />
                 <span className="font-medium">Plan Your Trip</span>
               </div>
+
+                    <Link href="/BestPlaces">
+              <div 
+                
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-white cursor-pointer"
+              >
+                 <span className="font-medium">Explore best places</span>
+              </div>
+              </Link>
               
               {user ? (
                 <div className="border-t border-gray-200 dark:border-gray-800 pt-4 mt-4">

@@ -170,7 +170,7 @@ const Home = () => {
                         rel="noopener noreferrer"
                         className="mt-3 inline-block text-cyan-500 hover:underline"
                       >
-                        View details
+                        Explore in detail
                       </a>
                     )}
                   </div>
