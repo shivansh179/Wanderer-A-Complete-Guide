@@ -310,8 +310,8 @@ const Index = () => {
               </div>
               </Link>
 
-              
-                        <Link href="/my-trips">
+
+                        <Link href="/MyTrips">
                           <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                             <FaMapMarkedAlt />
                             <span>My Trips</span>
@@ -449,7 +449,16 @@ const Index = () => {
                 <FaMapMarkedAlt className="text-blue-600 dark:text-blue-400" />
                 <span className="font-medium">Plan Your Trip</span>
               </div>
+                
 
+              <Link href="/MyTrips">
+                          <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <FaMapMarkedAlt />
+                            <span>My Trips</span>
+                          </div>
+                        </Link>
+
+                        
                     <Link href="/BestPlaces">
               <div 
                 
@@ -458,6 +467,7 @@ const Index = () => {
                  <span className="font-medium">Explore best places</span>
               </div>
               </Link>
+
               
               {user ? (
                 <div className="border-t border-gray-200 dark:border-gray-800 pt-4 mt-4">

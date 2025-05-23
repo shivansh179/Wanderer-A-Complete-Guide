@@ -1,17 +1,18 @@
+"use client"; // Assuming Next.js App Router, add if needed
+
 import React, { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { app } from "../../FirebaseCofig"; // <-- adjust path as needed
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { app } from "../../FirebaseCofig"; // Adjust path as needed
 
 type Plan = {
   name: string;
   price: string;
   description: string;
   benefits: string[];
-  highlight?: boolean;
 };
 
-const plans: Plan[] = [
+const plansData: Plan[] = [
   {
     name: "Free",
     price: "₹0",
@@ -25,7 +26,7 @@ const plans: Plan[] = [
   },
   {
     name: "Pro",
-    price: "₹499/mo",
+    price: "₹499", // Removed /mo for separate styling
     description: "For professionals who need more power.",
     benefits: [
       "All Free features",
@@ -37,7 +38,7 @@ const plans: Plan[] = [
   },
   {
     name: "Pro Alpha",
-    price: "₹1,299/mo",
+    price: "₹1,299", // Removed /mo
     description: "Early access to new features and premium tools.",
     benefits: [
       "All Pro features",
@@ -49,7 +50,7 @@ const plans: Plan[] = [
   },
   {
     name: "Pro Super",
-    price: "₹2,999/mo",
+    price: "₹2,999", // Removed /mo
     description: "For teams that demand the best.",
     benefits: [
       "All Pro Alpha features",
@@ -65,167 +66,169 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const SubscriptionPlans: React.FC = () => {
-  const [selectedPlan, setSelectedPlan] = useState<string>("Free");
+  const [selectedPlan, setSelectedPlan] = useState<string>("Free"); // Plan clicked in UI
+  const [userDbSubscription, setUserDbSubscription] = useState<string>("Free"); // Plan from DB
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false); // For button loading state
 
-  // Fetch user and subscription on mount
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      setLoading(true); // Start loading when auth state changes
 
-      if (firebaseUser) {
-        // Get user email from Firebase Auth
-        const email = firebaseUser?.providerData[0].email;
-        setUserEmail(email || null);
-        
-        if (email) {
-          console.log("Current user email:", email);
-          
-          try {
-            // Query Firestore users collection using email as document ID
-            const userDoc = await getDoc(doc(db, "users", email));
-            
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              console.log("User data from Firestore:", userData);
-              
-              // Check if user has a subscription field
-              if (userData.subscriptions) {
-                console.log("User subscription:", userData.subscriptions);
-                setSelectedPlan(userData.subscriptions);
-                
-                // Update the highlight property in plans array based on user's subscription
-                plans.forEach(plan => {
-                  plan.highlight = plan.name === userData.subscriptions;
-                });
-              } else {
-                console.log("User has no subscription, defaulting to Free plan");
-                setSelectedPlan("Free");
-                plans[0].highlight = true; // Highlight Free plan by default
-              }
-            } else {
-              console.log("No user document found with email:", email);
-              setSelectedPlan("Free");
-              plans[0].highlight = true; // Highlight Free plan by default
-            }
-          } catch (error) {
-            console.error("Error fetching user data:", error);
+      if (firebaseUser && firebaseUser.email) {
+        const email = firebaseUser.email;
+        try {
+          const userDocRef = doc(db, "users", email);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            const dbSub = userData.subscriptions || "Free";
+            setUserDbSubscription(dbSub);
+            setSelectedPlan(dbSub); // Initially, UI selected plan is the DB one
+          } else {
+            // User document doesn't exist, default to Free
+            setUserDbSubscription("Free");
             setSelectedPlan("Free");
-            plans[0].highlight = true; // Highlight Free plan by default
           }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUserDbSubscription("Free");
+          setSelectedPlan("Free");
         }
       } else {
-        // No user is signed in, default to Free plan
+        // No user or no email, default to Free
+        setUserDbSubscription("Free");
         setSelectedPlan("Free");
-        plans[0].highlight = true; // Highlight Free plan by default
       }
-      
       setLoading(false);
     });
-    
+
     return () => unsubscribe();
   }, []);
 
-  // Update subscription in Firestore
   const handlePlanSelect = async (planName: string) => {
+    // If already updating, or plan is already the DB subscription, do nothing (or allow re-selection for UI effect)
+    if (isUpdating) return;
+    
+    // Optimistically update UI
+    const previousSelectedPlan = selectedPlan;
     setSelectedPlan(planName);
-    
-    // Update highlight property in plans array
-    plans.forEach(plan => {
-      plan.highlight = plan.name === planName;
-    });
-    
-    if (user && userEmail) {
+
+    if (user && user.email && planName !== userDbSubscription) {
+      setIsUpdating(true);
       try {
-        console.log(`Updating subscription for ${userEmail} to ${planName}`);
-        
-        // Update the user document in Firestore using email as document ID
         await setDoc(
-          doc(db, "users", userEmail),
+          doc(db, "users", user.email),
           { subscriptions: planName },
           { merge: true }
         );
-        
-        console.log("Subscription updated successfully");
+        setUserDbSubscription(planName); // Update DB subscription state on success
+        console.log("Subscription updated successfully to:", planName);
       } catch (error) {
         console.error("Error updating subscription:", error);
+        setSelectedPlan(previousSelectedPlan); // Revert UI on error
+        // Optionally show an error message to the user
+      } finally {
+        setIsUpdating(false);
       }
-    } else {
-      console.warn("Cannot update subscription: User not logged in");
+    } else if (!user || !user.email) {
+        console.warn("Cannot update subscription: User not logged in or email missing.");
+        // If you want to allow UI selection even when not logged in:
+        // setSelectedPlan(planName); 
+        // But typically, subscription changes require login.
+        // For now, this just updates the selectedPlan state if not logged in for UI feel.
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-black">
-      <section className="flex-1 py-12">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-4">
-              Choose Your Plan
-            </h2>
-            <p className="text-lg text-gray-500">
-              Flexible pricing for teams and individuals. Upgrade anytime.
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-sky-50 text-gray-800">
+      <main className="flex-1 py-12 sm:py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 sm:mb-16">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">
+              Choose Your Perfect Plan
+            </h1>
+            <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+              Flexible pricing for individuals and teams. Upgrade or downgrade anytime.
             </p>
-            {userEmail && (
-              <p className="text-md text-blue-600 mt-2">
-                Logged in as: {userEmail}
+            {user && user.email && (
+              <p className="text-md text-indigo-600 mt-4">
+                Logged in as: {user.email}
               </p>
             )}
           </div>
+
           {loading ? (
-            <div className="text-center text-gray-500 py-12">Loading...</div>
+            <div className="flex justify-center items-center min-h-[300px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-600"></div>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {plans.map((plan) => {
-                const isSelected = selectedPlan === plan.name;
-                const isHighlighted = plan.highlight;
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+              {plansData.map((plan) => {
+                const isUiSelected = selectedPlan === plan.name; // Plan currently clicked/focused in UI
+                const isCurrentDbPlan = userDbSubscription === plan.name; // Actual plan in DB
+
+                let cardClasses = `relative flex flex-col p-6 bg-white rounded-xl border-2 text-center transition-all duration-300 ease-in-out transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-xl`;
+                let titleColor = "text-gray-900";
+                let buttonClasses = `mt-auto w-full px-6 py-3 rounded-lg font-semibold transition-colors duration-200`;
+                let buttonText = plan.name === "Free" ? "Get Started" : "Choose Plan";
+
+                if (isUiSelected) {
+                  cardClasses += " border-indigo-500 scale-105 shadow-indigo-200/80";
+                  titleColor = "text-indigo-600";
+                  buttonClasses += " bg-indigo-600 text-white hover:bg-indigo-700";
+                  buttonText = "Selected";
+                  if (isCurrentDbPlan) buttonText = "Current Plan"; // If UI selected is also DB plan
+                } else if (isCurrentDbPlan) {
+                  cardClasses += " border-teal-500 shadow-teal-100/70";
+                  titleColor = "text-teal-600";
+                  buttonClasses += " bg-teal-500 text-white hover:bg-teal-600";
+                  buttonText = "Current Plan";
+                } else {
+                  cardClasses += " border-gray-200 hover:border-gray-300";
+                  buttonClasses += " bg-gray-800 text-white hover:bg-gray-900";
+                }
                 
                 return (
                   <div
                     key={plan.name}
                     onClick={() => handlePlanSelect(plan.name)}
-                    className={`cursor-pointer flex flex-col p-8 bg-white rounded-lg border text-center transition-transform duration-300 ${
-                      isSelected
-                        ? "border-blue-600 shadow-2xl scale-105"
-                        : isHighlighted
-                        ? "border-green-600 shadow-xl scale-102"
-                        : "border-gray-200 shadow"
-                    }`}
+                    className={cardClasses}
                   >
-                    {isHighlighted && !isSelected && (
-                      <div className="absolute top-0 right-0 bg-green-500 text-white px-2 py-1 text-xs rounded-bl">
-                        Current Plan
+                    {isCurrentDbPlan && !isUiSelected && (
+                      <div className="absolute top-0 right-0 bg-teal-500 text-white px-3 py-1 text-xs font-semibold rounded-bl-lg rounded-tr-lg">
+                        Current
                       </div>
                     )}
-                    <h3
-                      className={`mb-2 text-2xl font-semibold ${
-                        isSelected 
-                          ? "text-blue-600" 
-                          : isHighlighted
-                          ? "text-green-600"
-                          : "text-gray-900"
-                      }`}
-                    >
+                     {isUiSelected && isCurrentDbPlan && (
+                      <div className="absolute top-0 right-0 bg-indigo-600 text-white px-3 py-1 text-xs font-semibold rounded-bl-lg rounded-tr-lg">
+                        Current
+                      </div>
+                    )}
+
+
+                    <h3 className={`mb-3 text-2xl font-bold ${titleColor}`}>
                       {plan.name}
                     </h3>
-                    <p className="text-gray-500 mb-6">{plan.description}</p>
+                    <p className="text-gray-500 mb-6 text-sm min-h-[40px]">{plan.description}</p>
                     <div className="flex justify-center items-baseline mb-8">
                       <span className="text-4xl font-extrabold text-gray-900">
                         {plan.price}
                       </span>
                       {plan.name !== "Free" && (
-                        <span className="ml-2 text-gray-500 text-base">
+                        <span className="ml-1.5 text-gray-500 text-sm">
                           /month
                         </span>
                       )}
                     </div>
-                    <ul className="mb-8 space-y-4 text-left">
+                    <ul className="mb-8 space-y-3 text-left text-sm text-gray-600 flex-grow">
                       {plan.benefits.map((benefit) => (
                         <li
                           key={benefit}
-                          className="flex items-center space-x-2"
+                          className="flex items-center space-x-2.5"
                         >
                           <svg
                             className="w-5 h-5 text-green-500 flex-shrink-0"
@@ -243,21 +246,14 @@ const SubscriptionPlans: React.FC = () => {
                       ))}
                     </ul>
                     <button
-                      className={`mt-auto px-6 py-3 rounded-lg text-white font-medium transition-colors ${
-                        isSelected
-                          ? "bg-blue-600 hover:bg-blue-700"
-                          : isHighlighted
-                          ? "bg-green-600 hover:bg-green-700"
-                          : "bg-gray-700 hover:bg-gray-800"
-                      }`}
+                      className={buttonClasses}
+                      disabled={isUpdating && selectedPlan === plan.name}
                     >
-                      {isSelected 
-                        ? "Selected" 
-                        : isHighlighted
-                        ? "Current Plan"
-                        : plan.name === "Free" 
-                        ? "Get Started" 
-                        : "Choose Plan"}
+                      {isUpdating && selectedPlan === plan.name ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mx-auto"></div>
+                      ) : (
+                        buttonText
+                      )}
                     </button>
                   </div>
                 );
@@ -265,22 +261,24 @@ const SubscriptionPlans: React.FC = () => {
             </div>
           )}
         </div>
-      </section>
-      <footer className="bg-gray-900 text-gray-200 mt-12">
-        <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row items-center justify-between">
-          <div className="mb-4 md:mb-0">
-            <span className="font-bold text-lg">YourCompany</span> &copy; {new Date().getFullYear()}
-          </div>
-          <div className="flex space-x-6">
-            <a href="#" className="hover:text-white transition">
-              Privacy Policy
-            </a>
-            <a href="#" className="hover:text-white transition">
-              Terms of Service
-            </a>
-            <a href="#" className="hover:text-white transition">
-              Contact
-            </a>
+      </main>
+      <footer className="bg-gray-900 text-gray-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="text-center md:text-left mb-4 md:mb-0">
+              <span className="font-bold text-lg text-white">YourCompany</span> © {new Date().getFullYear()}
+            </div>
+            <div className="flex space-x-4 sm:space-x-6">
+              <a href="#" className="hover:text-white transition-colors">
+                Privacy Policy
+              </a>
+              <a href="#" className="hover:text-white transition-colors">
+                Terms of Service
+              </a>
+              <a href="#" className="hover:text-white transition-colors">
+                Contact
+              </a>
+            </div>
           </div>
         </div>
       </footer>
