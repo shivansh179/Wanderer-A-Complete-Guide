@@ -55,7 +55,7 @@ const Landing = () => {
     { 
       id: 1, 
       name: "Paris, France", 
-      image: "/images/travel/paris.jpg", // Ensure this path is correct in your public folder
+      image: "/paris.jpg", // Ensure this path is correct in your public folder
       description: "Experience the romance of the Eiffel Tower and the charm of Parisian cafes.",
       rating: 4.8,
       price: "₹90,000", // Example in INR
@@ -64,7 +64,7 @@ const Landing = () => {
     { 
       id: 2, 
       name: "Kyoto, Japan", 
-      image: "/images/travel/kyoto.jpg", // Ensure this path is correct
+      image: "/tokyo.jpg", // Ensure this path is correct
       description: "Discover ancient temples, serene gardens, and the beauty of Japanese culture.",
       rating: 4.7,
       price: "₹1,35,000",
@@ -73,7 +73,7 @@ const Landing = () => {
     { 
       id: 3, 
       name: "Machu Picchu, Peru", 
-      image: "/images/travel/machu-picchu.jpg", // Ensure this path is correct
+      image: "/pachu.jpg", // Ensure this path is correct
       description: "Hike through breathtaking landscapes to the lost city of the Incas.",
       rating: 4.9,
       price: "₹1,12,000",
@@ -82,7 +82,7 @@ const Landing = () => {
     { 
       id: 4, 
       name: "Santorini, Greece", 
-      image: "/images/travel/santorini.jpg", // Ensure this path is correct
+      image: "/Santorini.jpg", // Ensure this path is correct
       description: "Experience stunning sunsets over the Aegean Sea from whitewashed villages.",
       rating: 4.9,
       price: "₹1,20,000",
@@ -91,7 +91,7 @@ const Landing = () => {
     { 
       id: 5, 
       name: "Bali, Indonesia", 
-      image: "/images/travel/bali.jpg", // Ensure this path is correct
+      image: "/Bali.jpg", // Ensure this path is correct
       description: "Discover lush rice terraces, spiritual temples, and beautiful beaches.",
       rating: 4.6,
       price: "₹82,000",
@@ -105,7 +105,7 @@ const Landing = () => {
       id: 1,
       title: "Northern Lights Adventure",
       location: "Iceland",
-      image: "https://images.unsplash.com/photo-1517015390060-6f093e5a4657?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bm9ydGhlcm4lMjBsaWdodHN8ZW58MHx8MHx8fDA%3D",
+      image: "https://images.pexels.com/photos/360912/pexels-photo-360912.jpeg?auto=compress&cs=tinysrgb&w=1200",
       price: "₹1,57,000",
       rating: 4.9
     },
@@ -113,7 +113,7 @@ const Landing = () => {
       id: 2,
       title: "Desert Safari Adventure",
       location: "Dubai, UAE",
-      image: "https://images.unsplash.com/photo-1542849187-595aa99326a1?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8ZGVzZXJ0JTIwc2FmYXJpfGVufDB8fDB8fHww",
+      image: "https://images.pexels.com/photos/1703312/pexels-photo-1703312.jpeg?auto=compress&cs=tinysrgb&w=1200",
       price: "₹67,000",
       rating: 4.7
     },
@@ -121,7 +121,7 @@ const Landing = () => {
       id: 3,
       title: "Rainforest Exploration",
       location: "Costa Rica",
-      image: "https://images.unsplash.com/photo-1500339489584-a7d6cb148181?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8cmFpbmZvcmVzdCUyMGV4cGxvcmF0aW9ufGVufDB8fDB8fHww",
+      image: "https://media.istockphoto.com/id/1318868707/photo/asian-chinese-single-mother-exploring-mossy-forest-in-cameron-highland-with-her-children.jpg?b=1&s=612x612&w=0&k=20&c=--xhPpY7lrdQcGuJd89KehpGQE9fVLk092jPlTRYgTA=",
       price: "₹1,01,000",
       rating: 4.8
     }
@@ -496,7 +496,7 @@ const Landing = () => {
               )}
             </div>
             <div className="text-center mt-10">
-              <Link href="/destinations" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 transition">
+              <Link href="/#" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 transition">
                 View all destinations
                 <FaChevronRight className="text-sm" />
               </Link>
@@ -633,7 +633,7 @@ const Landing = () => {
                         </div>
                         <div className="hidden md:flex justify-center items-center">
                             <img 
-                                src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8dHJhdmVsJTIwcmVsYXh8ZW58MHx8MHx8fDA%3D"
+                                src="https://images.unsplash.com/photo-1679339425540-5b7a706e1c8d?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dHJhdmVsJTIwaW5zcGlyYXRpb258ZW58MHx8MHx8fDA%3D"
                                 alt="Travel Inspiration" 
                                 className="rounded-lg shadow-xl max-h-80 object-cover"
                                 loading="lazy"
