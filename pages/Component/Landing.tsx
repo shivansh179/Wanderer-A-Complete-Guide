@@ -238,6 +238,7 @@ const Landing = () => {
       </div>
     );
   }
+  
 
   return (
     <>
@@ -247,6 +248,8 @@ const Landing = () => {
         <div className={`fixed top-0 mt-5 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md ${toastClosing ? 'animate-slide-up' : 'animate-slide-down'}`}>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div className="p-4">
+
+                  <Link href="/BestPlaces">
                     <div className="flex items-start">
                         <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900 rounded-full p-2">
                             <RiCompassDiscoverLine className="h-6 w-6 text-blue-600 dark:text-blue-300" />
@@ -262,6 +265,7 @@ const Landing = () => {
                             </button>
                         </div>
                     </div>
+                    </Link>
                 </div>
             </div>
         </div>
@@ -278,11 +282,11 @@ const Landing = () => {
                     className="w-full h-full object-cover"
                     poster="/adventure.jpg"
                 >
-                    <source src="/travel-video.mp4" type="video/mp4" />
+                    <source src="/travel.mp4" type="video/mp4" />
                     Your browser does not support the video tag.
                 </video>
             </div>
-            <div className="absolute top-0 left-0 w-full h-full bg-black opacity-60"></div>
+            <div className="absolute top-0 left-0 w-full h-full bg-black opacity-20"></div>
             <div className="relative z-10 px-4 text-white">
                 <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-4 animate-fade-in-down">
                     Your Journey Begins Here
@@ -305,7 +309,7 @@ const Landing = () => {
             </div>
         </section>
 
-        <section className="relative -mt-16 z-20 px-4">
+        {/* <section className="relative -mt-16 z-20 px-4">
             <div className="container mx-auto p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
                 <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 items-end gap-4">
                     <div className="w-full">
@@ -335,7 +339,7 @@ const Landing = () => {
                     </button>
                 </form>
             </div>
-        </section>
+        </section> */}
 
         <section id="destinations" className="py-24 bg-gray-50 dark:bg-gray-900">
             <div className="container mx-auto px-4">
@@ -436,9 +440,9 @@ const Landing = () => {
                             <h2 className="text-4xl font-bold mb-4">Ready for Your Next Escape?</h2>
                             <p className="text-blue-100 mb-8 text-lg">Join our newsletter for exclusive deals, new destination alerts, and a dose of travel inspiration delivered to your inbox.</p>
                             <form className="flex flex-col sm:flex-row gap-3">
-                                <input type="email" placeholder="Enter your email" className="flex-1 px-5 py-3 rounded-lg text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-300/50" aria-label="Email for newsletter" />
+                                {/* <input type="email" placeholder="Enter your email" className="flex-1 px-5 py-3 rounded-lg text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-300/50" aria-label="Email for newsletter" /> */}
                                 <button type="submit" className="bg-white text-blue-600 font-bold px-6 py-3 rounded-lg hover:bg-gray-200 transition duration-300 shadow-md transform hover:scale-105">
-                                    Subscribe
+                                    Fetch Your Plan
                                 </button>
                             </form>
                         </div>

@@ -11,17 +11,17 @@ import axios from 'axios';
 import { auth } from '@/FirebaseCofig';
 import InputForm from './InputForm';
 import ResultsSection from './ResultsSection';
-import { Image, NewsItem, Video, Trip } from '@/types/types'; // Assuming Trip is in types/types.ts
+import { Image, NewsItem, Video, Trip } from '@/types/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import AuthGuard from '../AuthGuard/AuthGuard';
-import { collection, getFirestore, setDoc, updateDoc, arrayUnion, deleteDoc, DocumentData } from 'firebase/firestore'; // Added DocumentData
+import { collection, getFirestore, setDoc, updateDoc, arrayUnion, deleteDoc, DocumentData } from 'firebase/firestore';
 import { doc, getDoc } from 'firebase/firestore';
 import router from 'next/router';
-import { FaSpinner, FaLock, FaCheckCircle, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaSpinner, FaLock, FaChevronDown, FaChevronUp,  FaDollarSign, FaUsers, FaArrowRight, FaPlus, FaWandMagicSparkles, FaPaperPlane } from 'react-icons/fa6';
+import { FaCheckCircle,FaMapMarkerAlt,FaCalendarAlt } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Feature definitions (can be moved to a utils file)
 interface PlanFeature {
   key: string;
   label: string;
@@ -97,7 +97,6 @@ const Index = () => {
 
     const db = getFirestore();
 
-    // --- Firestore Functions ---
     const fetchUserDetailsFromFirestore = async (userEmail: string): Promise<DocumentData | null> => {
         const userDocRef = doc(db, 'users', userEmail);
         const docSnapshot = await getDoc(userDocRef);
@@ -332,7 +331,7 @@ const Index = () => {
                 setUserSubscription(currentSub);
             } else {
                 await setDoc(userDocRef, { email: user.email, planGenerationCount: 0, subscriptions: 'Free', createdAt: new Date().toISOString() });
-                userDetailsFromDb = { name: user.displayName || "User", subscriptions: 'Free', email: user.email }; // Use Firebase display name
+                userDetailsFromDb = { name: user.displayName || "User", subscriptions: 'Free', email: user.email };
                 currentSub = 'Free'; setUserSubscription('Free');
             }
 
@@ -404,7 +403,7 @@ const Index = () => {
                 if (user.email !== 'prasantshukla89@gmail.com') {
                    await incrementPlanGenerationCount(user.email);
                 }
-                const tripData: Omit<Trip, 'id' | 'createdAt'> = { // Use Omit for data before ID/createdAt assigned
+                const tripData: Omit<Trip, 'id' | 'createdAt'> = {
                     email: user.email, name: userDetailsFromDb?.name || user.displayName || 'User',
                     startLocation, destination, days, budget, peopleCount, tripForFamily,
                     familyElderlyCount: tripForFamily ? familyElderlyCount : '',
@@ -413,18 +412,15 @@ const Index = () => {
                     familyPreferences: tripForFamily ? familyPreferences : '',
                     generatedWithSubscription: currentSub,
                     selectedFeatures: selectedOptionalFeatures,
-                    // planSummary and hasPlan will be added by saveTrip
                 };
                 const savedTripId = await saveTrip(tripData, extractedPlan);
                 let successMsg = `Your ${planTierDescriptor} for ${destination} is ready!`;
                 if(selectedOptionalFeatures.length > 0) successMsg += " Includes your customizations.";
-                // if (!savedTripId) toast
-                // Planner.tsx (Continuing from the previous snippet)
 
                 if (!savedTripId) toast.error("Plan generated, but failed to save.");
                 else toast.success(successMsg);
 
-            } else if (!error) { // If no error was set by AI calls but plan is still insufficient
+            } else if (!error) {
                 setError('The AI could not generate a detailed plan with the provided information.');
                 toast.warn('Could not generate a detailed plan. Try being more specific or adjusting the parameters.');
             }
@@ -432,9 +428,9 @@ const Index = () => {
             console.error('Plan generation process error:', err);
             setError(err.message || 'An unexpected error occurred during plan generation.');
             toast.error('An unexpected error occurred. Please try again.');
-            setPlan(''); // Ensure plan is cleared on error
+            setPlan('');
         } finally {
-            setLoading(false); // Ensure loading is always turned off
+            setLoading(false);
         }
     };
 
@@ -582,7 +578,6 @@ const Index = () => {
     const handleSubscribe = (): void => { router.push('/Subscription'); };
     const handleClose = (): void => { setShowModal(false); };
 
-    // Planner.tsx (Continuing from the previous snippet)
     const handleFeatureToggle = (featureKey: string): void => {
       setSelectedOptionalFeatures((prev) =>
           prev.includes(featureKey)
@@ -605,89 +600,72 @@ const Index = () => {
 
   return (
       <AuthGuard>
-          <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
+          <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="dark" />
           <Navbar />
-          <div className="bg-gray-50 text-gray-900 dark:text-white dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 min-h-screen">
-              <div className="pt-24 pb-16">
+          <div className="bg-slate-50 text-slate-800 dark:bg-[#0B1120] dark:text-slate-200 min-h-screen font-sans">
+              <div className="pt-28 pb-16">
                   <motion.div className="container mx-auto px-4 sm:px-6 lg:px-8" initial="hidden" animate="visible" exit="exit" variants={pageTransition}>
                       {!planGenerated && !loading && (
-                          <div className="text-center mb-10">
-                              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
-                                  Plan Your Perfect Journey
-                                  {userSubscription && userSubscription !== "Free" && (
-                                      <span className="block text-2xl text-blue-500 dark:text-blue-400 mt-2">
-                                          ({userSubscription} Plan)
-                                      </span>
-                                  )}
+                          <div className="text-center mb-12">
+                              <h1 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
+                                  Craft Your Next Adventure
                               </h1>
-                              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                                  Fill in your details and select optional features to personalize your AI-generated travel plan.
+                              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
+                                  Tell us your dream, and our AI will architect the perfect journey, tailored just for you.
                               </p>
+                               {userSubscription && userSubscription !== "Free" && (
+                                    <div className="inline-block bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 rounded-full px-4 py-1 text-sm font-medium mt-4">
+                                        {userSubscription} Plan Active
+                                    </div>
+                                )}
                           </div>
                       )}
 
-                      <div className={`flex flex-wrap gap-6 transition-all duration-700 ease-in-out`}>
+                      <div className={`transition-all duration-700 ease-in-out`}>
                           <AnimatePresence mode="wait">
                               {!planGenerated && !loading && (
-                                  <motion.div key="input-form-container" className="w-full lg:w-2/3 mx-auto" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
-                                      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                                          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6"><h2 className="text-2xl font-bold text-white">Travel Details</h2><p className="text-blue-100 mt-1">Your adventure starts here</p></div>
-                                          <div className="p-6 md:p-8">
+                                  <motion.div key="input-form-container" className="w-full max-w-4xl mx-auto" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
+                                      <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-2xl shadow-slate-200/50 dark:shadow-black/20 overflow-hidden border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">
+                                          <div className="p-6 md:p-10">
                                           <InputForm
-  startLocation={startLocation}
-  setStartLocation={setStartLocation}
-  destination={destination}
-  setDestination={setDestination}
-  days={days}
-  setDays={setDays}
-  budget={budget}
-  setBudget={setBudget}
-  peopleCount={peopleCount}
-  setPeopleCount={setPeopleCount}
-  tripForFamily={tripForFamily}
-  setTripForFamily={setTripForFamily}
-  familyElderlyCount={familyElderlyCount}
-  setFamilyElderlyCount={setFamilyElderlyCount}
-  familyLadiesCount={familyLadiesCount}
-  setFamilyLadiesCount={setFamilyLadiesCount}
-  familyChildrenCount={familyChildrenCount}
-  setFamilyChildrenCount={setFamilyChildrenCount}
-  familyPreferences={familyPreferences}
-  setFamilyPreferences={setFamilyPreferences}
-  loading={loading}
-  imageLoading={imageLoading}
-  ladiesCount={''}
-  setLadiesCount={() => {}}
-  elderlyCount={''}
-  setElderlyCount={() => {}}
-  childrenCount={''}
-  setChildrenCount={() => {}}
-  planFetcher={planFetcher} // ✅ Add this line
-/>
+                                                startLocation={startLocation} setStartLocation={setStartLocation}
+                                                destination={destination} setDestination={setDestination}
+                                                days={days} setDays={setDays}
+                                                budget={budget} setBudget={setBudget}
+                                                peopleCount={peopleCount} setPeopleCount={setPeopleCount}
+                                                tripForFamily={tripForFamily} setTripForFamily={setTripForFamily}
+                                                familyElderlyCount={familyElderlyCount} setFamilyElderlyCount={setFamilyElderlyCount}
+                                                familyLadiesCount={familyLadiesCount} setFamilyLadiesCount={setFamilyLadiesCount}
+                                                familyChildrenCount={familyChildrenCount} setFamilyChildrenCount={setFamilyChildrenCount}
+                                                familyPreferences={familyPreferences} setFamilyPreferences={setFamilyPreferences}
+                                                loading={loading} imageLoading={imageLoading}
+                                                ladiesCount={''} setLadiesCount={() => {}} elderlyCount={''}
+                                                setElderlyCount={() => {}} childrenCount={''}
+                                                setChildrenCount={() => {}} planFetcher={planFetcher}
+                                            />
 
-
-                                              {/* Feature Selector Section */}
                                               <div className="mt-8">
                                                   <button
                                                       onClick={() => setShowFeatureSelector(!showFeatureSelector)}
-                                                      className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md text-gray-800 dark:text-gray-200 font-medium transition-colors"
+                                                      className="w-full flex items-center justify-between px-5 py-4 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800"
                                                   >
-                                                      <span>{showFeatureSelector ? 'Hide' : 'Show'} Optional Plan Features ({selectedOptionalFeatures.length} selected)</span>
-                                                      {showFeatureSelector ? <FaChevronUp /> : <FaChevronDown />}
+                                                      <span className="flex items-center gap-3"><FaWandMagicSparkles className="text-teal-500"/> Personalize Your Plan ({selectedOptionalFeatures.length} added)</span>
+                                                      <motion.div animate={{ rotate: showFeatureSelector ? 180 : 0}}><FaChevronDown /></motion.div>
                                                   </button>
 
                                                   <AnimatePresence>
                                                       {showFeatureSelector && (
                                                           <motion.div
-                                                              initial={{ opacity: 0, height: 0 }}
-                                                              animate={{ opacity: 1, height: 'auto' }}
-                                                              exit={{ opacity: 0, height: 0 }}
-                                                              transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                              className="mt-4 p-4 border border-gray-200 dark:border-gray-600 rounded-md space-y-3 overflow-hidden"
+                                                              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                                              animate={{ opacity: 1, height: 'auto', marginTop: '1rem' }}
+                                                              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                                              transition={{ duration: 0.4, ease: "easeInOut" }}
+                                                              className="border border-slate-200 dark:border-slate-700/80 rounded-lg space-y-1 p-2 bg-slate-50 dark:bg-slate-900/20 overflow-hidden"
                                                           >
-                                                              <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                                                  Available for your '{userSubscription || 'Free'}' plan:
+                                                              <h4 className="text-md font-semibold text-slate-800 dark:text-slate-200 p-2">
+                                                                  Enhancements for your <span className='text-teal-600 dark:text-teal-400'>{userSubscription || 'Free'}</span> plan:
                                                               </h4>
+                                                              <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
                                                               {ALL_PLAN_FEATURES.map((feature) => {
                                                                   const hasAccess = userHasAccessToFeature(userSubscription, feature.minPlan);
                                                                   const isSelected = selectedOptionalFeatures.includes(feature.key);
@@ -696,54 +674,57 @@ const Index = () => {
                                                                   return (
                                                                       <div
                                                                           key={feature.key}
-                                                                          className={`p-3 border rounded-md transition-all hover:shadow-sm
-                                                                              ${hasAccess ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800' 
-                                                                                         : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 opacity-60 cursor-not-allowed'}`}
+                                                                          className={`p-4 border rounded-lg transition-all duration-300
+                                                                              ${hasAccess ? 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer' 
+                                                                                         : 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/40 opacity-70 cursor-not-allowed'}
+                                                                              ${isSelected && hasAccess ? 'ring-2 ring-teal-500 border-teal-500' : ''}
+                                                                              `}
+                                                                          onClick={() => hasAccess && handleFeatureToggle(feature.key)}
                                                                           title={!hasAccess ? `Requires ${feature.minPlan} plan or higher` : featureDescriptionText}
                                                                       >
-                                                                          <label className={`flex items-center ${hasAccess ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
-                                                                              <input
-                                                                                  type="checkbox"
-                                                                                  className="h-5 w-5 text-blue-600 border-gray-300 dark:border-gray-500 rounded focus:ring-blue-500 dark:focus:ring-blue-400 dark:ring-offset-gray-800 dark:bg-gray-700 disabled:opacity-50"
-                                                                                  checked={isSelected}
-                                                                                  disabled={!hasAccess}
-                                                                                  onChange={() => hasAccess && handleFeatureToggle(feature.key)}
-                                                                              />
-                                                                              <span className={`ml-3 text-sm font-medium ${hasAccess ? 'text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                                          <div className="flex items-start justify-between">
+                                                                            <div className='pr-4'>
+                                                                              <span className={`font-semibold ${hasAccess ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
                                                                                   {feature.label}
                                                                               </span>
-                                                                          </label>
-                                                                          {featureDescriptionText && (
-                                                                              <p className={`mt-1 text-xs ${hasAccess ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                                                                                  {featureDescriptionText}
-                                                                              </p>
-                                                                          )}
+                                                                              {featureDescriptionText && (
+                                                                                <p className={`mt-1 text-sm ${hasAccess ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                                                                                    {featureDescriptionText}
+                                                                                </p>
+                                                                              )}
+                                                                            </div>
+                                                                            <div className={`w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center border-2 ${isSelected && hasAccess ? 'bg-teal-500 border-teal-500' : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-500'}`}>
+                                                                              {isSelected && hasAccess && <FaCheckCircle className="text-white text-sm"/>}
+                                                                            </div>
+                                                                          </div>
                                                                           {!hasAccess && (
-                                                                              <p className="mt-1 text-xs text-orange-500 dark:text-orange-400">
-                                                                                  (Requires {feature.minPlan} plan. <button onClick={() => router.push('/Subscription')} className="underline hover:text-orange-400 dark:hover:text-orange-300">Upgrade</button>)
+                                                                              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                                                                  Requires {feature.minPlan} Plan. <button onClick={() => router.push('/Subscription')} className="underline hover:text-amber-500">Upgrade</button>
                                                                               </p>
                                                                           )}
                                                                       </div>
                                                                   );
                                                               })}
+                                                              </div>
                                                           </motion.div>
                                                       )}
                                                   </AnimatePresence>
                                               </div>
-
-                                              {/* Generate Plan Button */}
-                                              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                              
+                                              <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700/50 flex justify-end">
                                                   <button
                                                       onClick={planFetcher}
-                                                      disabled={loading || !destination || !days || !budget || !startLocation || !peopleCount } // Added more comprehensive basic validation
-                                                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+                                                      disabled={loading || !destination || !days || !budget || !startLocation || !peopleCount }
+                                                      className="group flex items-center justify-center gap-3 w-full sm:w-auto bg-slate-800 hover:bg-slate-900 dark:bg-teal-500 dark:hover:bg-teal-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-slate-400 dark:focus:ring-teal-400/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transform hover:-translate-y-1 disabled:transform-none"
                                                   >
                                                       {loading ? (
                                                           <>
-                                                              <FaSpinner className="animate-spin mr-2" /> Generating Plan...
+                                                              <FaSpinner className="animate-spin" /> Crafting...
                                                           </>
                                                       ) : (
-                                                          'Generate My Travel Plan'
+                                                          <>
+                                                            {/* Generate My Itinerary <FaPaperPlane className="transition-transform duration-300 group-hover:translate-x-1" /> */}
+                                                          </>
                                                       )}
                                                   </button>
                                               </div>
@@ -752,30 +733,29 @@ const Index = () => {
                                   </motion.div>
                               )}
                           </AnimatePresence>
-
-                          {/* Loading State Indicator */}
-                          <AnimatePresence>{loading && (<motion.div key="loading-indicator" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 dark:bg-opacity-75 z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}><motion.div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-11/12 mx-4 shadow-2xl text-center" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", stiffness: 200, damping: 20 }}><div className="flex justify-center mb-5"><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}><FaSpinner className="text-5xl text-blue-600 dark:text-blue-400" /></motion.div></div><h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Crafting Your Adventure...</h3><p className="text-gray-600 dark:text-gray-300 px-4">{destination ? `Designing your plan for ${destination}.` : 'Getting ready.'}</p></motion.div></motion.div>)}</AnimatePresence>
                           
-                          {/* Plan Generation Success Animation */}
-                          <AnimatePresence>{planGenerationSuccess && !loading && (<motion.div key="success-animation" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[60]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onAnimationComplete={() => { setTimeout(() => { setPlanGenerationSuccess(false); }, 1200); }}><motion.div className="bg-white dark:bg-gray-800 rounded-full p-6 shadow-2xl flex items-center justify-center aspect-square" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1, transition: { type: "spring", stiffness: 250, damping: 15, delay: 0.1 } }} exit={{ scale: 1.2, opacity: 0, transition: { duration: 0.4 } }}><FaCheckCircle className="text-7xl text-green-500" /></motion.div></motion.div>)}</AnimatePresence>
+                          <AnimatePresence>{loading && (<motion.div key="loading-indicator" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 dark:bg-opacity-80 z-50 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}><motion.div className="bg-white/90 dark:bg-slate-800/90 rounded-2xl p-8 max-w-md w-11/12 mx-4 shadow-2xl text-center backdrop-blur-lg border border-white/20" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", stiffness: 200, damping: 20 }}><div className="flex justify-center mb-5"><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}><FaSpinner className="text-5xl text-teal-500" /></motion.div></div><h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Architecting Your Journey...</h3><p className="text-slate-600 dark:text-slate-300 px-4">{destination ? `Tailoring your perfect trip to ${destination}.` : 'Preparing the canvas.'}</p></motion.div></motion.div>)}</AnimatePresence>
+                          
+                          <AnimatePresence>{planGenerationSuccess && !loading && (<motion.div key="success-animation" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[60] backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onAnimationComplete={() => { setTimeout(() => { setPlanGenerationSuccess(false); }, 1200); }}><motion.div className="bg-white dark:bg-slate-800 rounded-full p-6 shadow-2xl flex items-center justify-center aspect-square" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1, transition: { type: "spring", stiffness: 250, damping: 15, delay: 0.1 } }} exit={{ scale: 1.2, opacity: 0, transition: { duration: 0.4 } }}><FaCheckCircle className="text-7xl md:text-8xl text-green-500" /></motion.div></motion.div>)}</AnimatePresence>
 
-                          {/* Results Section */}
                           {planGenerated && !loading && plan && (
                               <motion.div key="results-section-container" className="w-full" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
-                                   <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                                      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 md:p-6">
-                                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                   <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-2xl shadow-slate-200/50 dark:shadow-black/20 overflow-hidden border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">
+                                      <div className="p-5 md:p-6 border-b border-slate-200 dark:border-slate-700/50">
+                                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                               <div>
-                                                  <h2 className="text-2xl font-bold text-white">
-                                                      Your {days || 'Custom'} Day Trip to {destination || 'Selected Destination'}
-                                                      <span className="text-lg block text-blue-200">({userSubscription || 'Free'} Plan {selectedOptionalFeatures.length > 0 ? 'with Customizations' : ''})</span>
+                                                  <p className="text-sm font-medium text-teal-600 dark:text-teal-400 mb-1">
+                                                     {userSubscription || 'Free'} Plan {selectedOptionalFeatures.length > 0 ? 'with Customizations' : ''}
+                                                  </p>
+                                                  <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+                                                      Your Trip to {destination || 'Selected Destination'}
                                                   </h2>
-                                                  <p className="text-blue-100 mt-1 text-sm">
-                                                      {startLocation && `From ${startLocation}`} {budget && `• Budget: ${budget}`} {peopleCount && `• ${peopleCount} Traveler(s)`}
+                                                  <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+                                                      {days || 'Custom'} days trip • {startLocation && `From ${startLocation}`} {budget && `• Budget: ${budget}`} {peopleCount && `• ${peopleCount} Traveler(s)`}
                                                   </p>
                                               </div>
-                                              <button onClick={resetPlanForm} className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition text-sm font-medium shrink-0">
-                                                  Create New Plan
+                                              <button onClick={resetPlanForm} className="px-4 py-2 bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition text-sm font-semibold shrink-0 flex items-center gap-2">
+                                                  <FaPlus /> Create New Plan
                                               </button>
                                           </div>
                                       </div>
@@ -806,8 +786,7 @@ const Index = () => {
               </div>
           </div>
 
-          {/* Subscription Modal */}
-          <AnimatePresence>{showModal && (<motion.div key="subscription-modal" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-[70]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><motion.div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-2xl max-w-lg w-11/12 mx-4" initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 25 } }} exit={{ scale: 0.9, opacity: 0, y: 20, transition: { duration: 0.2 } }}><div className="bg-gradient-to-r from-orange-500 to-red-600 p-5 text-white"><div className="flex items-center gap-3"><FaLock className="text-2xl" /><h2 className="text-xl font-semibold">Unlock Full Access</h2></div></div><div className="p-6"><p className="text-gray-700 dark:text-gray-300 mb-5 text-base">You've used your plan generations for the '{userSubscription || 'Free'}' tier. Subscribe or upgrade for more generations and enhanced features!</p><div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-750 p-4 rounded-lg mb-6 border border-blue-200 dark:border-gray-600"><h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 text-center text-lg">Premium Benefits Include:</h3><ul className="text-gray-700 dark:text-gray-300 space-y-2 text-sm grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2"><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Unlimited AI Itineraries</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Advanced Customization</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Priority Support</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Exclusive Travel Tips</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Save & Manage Trips</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Offline Plan Access</span></li></ul></div><div className="flex flex-col sm:flex-row justify-end gap-3 pt-2"><button onClick={handleClose} className={`w-full sm:w-auto px-5 py-2.5 text-center text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg transition text-sm font-medium ${modalAnimating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-500'}`} disabled={modalAnimating}>Maybe Later</button><button onClick={handleSubscribe} className={`w-full sm:w-auto px-6 py-2.5 text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-md transition text-sm ${modalAnimating ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5'}`} disabled={modalAnimating}>Subscribe Now</button></div></div></motion.div></motion.div>)}</AnimatePresence>
+          <AnimatePresence>{showModal && (<motion.div key="subscription-modal" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-[70] backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><motion.div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-2xl max-w-lg w-11/12 mx-4 border border-slate-300 dark:border-slate-700" initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 25 } }} exit={{ scale: 0.9, opacity: 0, y: 20, transition: { duration: 0.2 } }}><div className="bg-gradient-to-r from-amber-400 to-orange-500 p-5 text-white"><div className="flex items-center gap-3"><FaLock className="text-2xl" /><h2 className="text-xl font-semibold">Generation Limit Reached</h2></div></div><div className="p-6"><p className="text-slate-600 dark:text-slate-300 mb-5 text-base">You've used all available plan generations for the <span className='font-bold text-slate-800 dark:text-white'>'{userSubscription || 'Free'}'</span> tier. Upgrade your plan to continue creating unlimited itineraries with enhanced features!</p><div className="bg-slate-100 dark:bg-slate-900/40 p-4 rounded-lg mb-6 border border-slate-200 dark:border-slate-700"><h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-center text-lg">Go Premium to Unlock:</h3><ul className="text-slate-600 dark:text-slate-300 space-y-2 text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2"><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Unlimited AI Itineraries</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Advanced Customization</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Exclusive Travel Tips</span></li><li className="flex items-center gap-2"><FaCheckCircle className="text-green-500 flex-shrink-0" /><span>Priority AI Models</span></li></ul></div><div className="flex flex-col sm:flex-row justify-end gap-3 pt-2"><button onClick={handleClose} className={`w-full sm:w-auto px-5 py-2.5 text-center text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 border border-transparent rounded-lg transition text-sm font-medium ${modalAnimating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-300 dark:hover:bg-slate-600'}`} disabled={modalAnimating}>Maybe Later</button><button onClick={handleSubscribe} className={`w-full sm:w-auto px-6 py-2.5 text-center bg-gradient-to-r from-teal-500 to-cyan-600 text-white font-medium rounded-lg shadow-md transition text-sm ${modalAnimating ? 'opacity-50 cursor-not-allowed' : 'hover:from-teal-600 hover:to-cyan-700 transform hover:scale-105'}`} disabled={modalAnimating}>Explore Plans</button></div></div></motion.div></motion.div>)}</AnimatePresence>
       </AuthGuard>
   );
 };
