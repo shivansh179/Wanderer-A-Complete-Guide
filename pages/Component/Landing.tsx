@@ -249,10 +249,13 @@ const Landing = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div className="p-4">
 
-                  <Link href="/BestPlaces">
+               
                     <div className="flex items-start">
                         <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900 rounded-full p-2">
+                        <Link href="/BestPlaces">
                             <RiCompassDiscoverLine className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                            </Link>
+
                         </div>
                         <div className="ml-3 w-0 flex-1 pt-0.5">
                             <p className="text-sm font-medium text-gray-900 dark:text-white">New Local Adventures Unlocked!</p>
@@ -265,7 +268,6 @@ const Landing = () => {
                             </button>
                         </div>
                     </div>
-                    </Link>
                 </div>
             </div>
         </div>
